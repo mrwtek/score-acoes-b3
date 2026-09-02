@@ -1,0 +1,569 @@
+================================================================================
+PRD - PLATAFORMA PESSOAL DE ANALISE E SCORE DE ACOES (B3)
+Versao: 1.1 (inclui backlog priorizado - secao 10)
+Data: 01/09/2026
+Autor: (voce)
+Status: Em desenvolvimento - MVP parcialmente implementado
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. CONTEXTO E PROBLEMA
+--------------------------------------------------------------------------------
+
+Hoje a decisao de comprar ou vender uma acao depende de consultar varias fontes
+separadas (site de fundamentos, home broker, planilha de posicoes) e de comparar
+tudo mentalmente. Nao existe registro historico de "como aquela acao estava" em
+uma data passada, entao nao da para saber se um papel melhorou ou piorou desde a
+ultima vez que foi avaliado.
+
+O projeto resolve isso consolidando, em uma base local unica:
+  - indicadores fundamentalistas (API BolsAI);
+  - cotacoes e dados de mercado em tempo quase real (API brapi);
+  - a carteira propria (quantidade, preco medio, lucro/prejuizo);
+  - um score composto que resume "esta boa" e "esta barata";
+  - snapshots historicos desse score para comparacao ao longo do tempo.
+
+Premissa central: o sistema NAO executa ordens e NAO decide nada. Ele automatiza
+coleta, calculo e visualizacao. A decisao de compra e venda continua 100% humana.
+
+
+--------------------------------------------------------------------------------
+2. OBJETIVOS
+--------------------------------------------------------------------------------
+
+2.1 Objetivo principal
+  Ter um app rodando localmente (VSCode / terminal + interface web) que colete,
+  armazene e pontue acoes brasileiras de uma whitelist, exibindo de forma visual
+  quais estao boas (fundamento) e baratas (preco), e qual a situacao da carteira.
+
+2.2 Objetivos secundarios
+  O1. Historico versionado dos scores (snapshot diario e mensal) para comparacao.
+  O2. Separacao clara entre motor automatico (coleta/score) e bancada de
+      pesquisa livre (analise.ipynb / analise.py) para analises estatisticas
+      exploratorias sem quebrar o pipeline.
+  O3. Rastreamento de resultado da carteira: quanto foi pago, quanto vale hoje,
+      lucro/prejuizo absoluto e relativo, por ativo e no total.
+  O4. Sinais explicitos de "zona de compra", "manter" e "zona de venda", com o
+      motivo do sinal sempre visivel (nunca uma caixa preta).
+
+2.3 Nao-objetivos (fora de escopo nesta versao)
+  - Execucao de ordens / integracao com corretora.
+  - Robo de trade automatico ou qualquer decisao autonoma.
+  - Multiusuario, autenticacao, deploy em nuvem.
+  - Day trade / dados intradiarios tick a tick.
+  - Recomendacao de investimento para terceiros.
+  - Renda fixa, FIIs, cripto, ativos internacionais (podem entrar depois).
+
+
+--------------------------------------------------------------------------------
+3. USUARIO
+--------------------------------------------------------------------------------
+
+Usuario unico: investidor pessoa fisica, perfil tecnico (Python, estatistica),
+horizonte de medio/longo prazo, opera pelo home broker manualmente e registra as
+operacoes no sistema depois. Usa VSCode como ambiente principal.
+
+Historias de usuario principais:
+  US1. Como investidor, quero ver um ranking das acoes monitoradas por score
+       geral, para saber onde olhar primeiro.
+  US2. Como investidor, quero ver minha carteira com preco medio, preco atual e
+       lucro relativo, para saber onde estou ganhando ou perdendo.
+  US3. Como investidor, quero saber se uma acao que ja tenho esta em zona de
+       venda, para avaliar realizar lucro.
+  US4. Como investidor, quero comparar o score de hoje com o de 30 dias atras,
+       para saber se a tese melhorou ou piorou.
+  US5. Como investidor, quero rodar minhas proprias analises (PCA, ARIMA,
+       correlacao) sobre a mesma base, sem depender da interface.
+
+
+--------------------------------------------------------------------------------
+4. ESTADO ATUAL (BASELINE)
+--------------------------------------------------------------------------------
+
+JA IMPLEMENTADO
+  [OK] config.py            - carrega BRAPI_TOKEN e BOLSAI_TOKEN via .env
+  [OK] coletor.py           - buscar_dados_acao (brapi/quote),
+                              buscar_fundamentos (BolsAI/fundamentals),
+                              coletar_whitelist
+  [OK] banco.py             - SQLite: tabelas cotacoes, fundamentos, posicoes;
+                              salvar_cotacoes, salvar_fundamento,
+                              ja_tem_fundamento_hoje (dedupe diario),
+                              registrar_compra (preco medio ponderado),
+                              registrar_venda, listar_posicoes,
+                              listar_tickers_em_carteira
+  [OK] whitelist.py         - WHITELIST_BASE uniao dos tickers em carteira
+  [OK] main.py              - loop de coleta em thread + CLI
+                              (help / whitelistshow / pause / resume /
+                               checknow / exit)
+  [OK] gerenciar_posicoes.py- CLI de carteira (buy / sell / show)
+  [OK] analise.py           - score fundamentalista por categoria com pesos,
+                              score de preco por posicao no range, score geral
+  [OK] analise.ipynb        - descritiva, histogramas, boxplots, correlacao,
+                              PCA (scree, scatter PC1xPC2, loadings),
+                              serie temporal, ADF, ACF/PACF, grid search ARIMA
+  [OK] Join entre as duas fontes funcionando pela chave `ticker`
+
+FALTA (escopo deste PRD)
+  [  ] Tabela de snapshots historicos de score (diario e mensal)
+  [  ] Tabela de transacoes (historico imutavel de compras/vendas)
+  [  ] Calculo de lucro/prejuizo e rentabilidade da carteira
+  [  ] Regras de sinal (compra / manter / venda) com justificativa
+  [  ] Interface visual (dashboard)
+  [  ] Camada de configuracao de pesos e limiares sem editar codigo
+  [  ] Tratamento de falha de API, retry e log de coleta
+  [  ] Correcoes de robustez listadas na secao 10
+
+
+--------------------------------------------------------------------------------
+5. ARQUITETURA ALVO
+--------------------------------------------------------------------------------
+
+    +-------------------+        +---------------------+
+    |   API brapi       |        |   API BolsAI        |
+    |  (cotacao, volume,|        | (pl, pvp, roe, roa, |
+    |   market cap, PL) |        |  roic, margens,     |
+    |                   |        |  divida, CAGRs)     |
+    +---------+---------+        +----------+----------+
+              |                             |
+              +-------------+---------------+
+                            v
+                     [ coletor.py ]  <- whitelist.py
+                            |
+                            v
+                     [ banco.py ] -> SQLite  data/acoes.db
+                            |
+        +-------------------+---------------------+
+        v                                         v
+  [ scoring.py ]  (motor de score e sinais)   [ analise.ipynb ]
+        |                                      (pesquisa livre)
+        v
+  [ snapshots ]  (fotos diarias/mensais do score)
+        |
+        v
+  [ app / dashboard ]  (Streamlit)  <-> [ carteira.py ]
+
+Estrutura de pastas sugerida:
+
+  projeto/
+    data/
+      acoes.db
+    src/
+      config.py
+      whitelist.py
+      coletor.py
+      banco.py
+      scoring.py          <- novo: extrai a logica de score de analise.py
+      carteira.py         <- novo: PnL, lucro relativo, alocacao
+      sinais.py           <- novo: regras de compra/manter/venda
+      snapshots.py        <- novo: consolidacao diaria/mensal
+      main.py             <- orquestrador/CLI
+      gerenciar_posicoes.py
+      app.py              <- novo: dashboard Streamlit
+    notebooks/
+      analise.ipynb       <- bancada de pesquisa (nao faz parte do pipeline)
+    exports/              <- CSV/Parquet dos datasets consolidados
+    .env
+    requirements.txt
+
+Stack: Python 3.11+, SQLite, pandas, numpy, scikit-learn, statsmodels,
+matplotlib/seaborn (notebook), Streamlit + Plotly (dashboard), requests,
+python-dotenv.
+
+
+--------------------------------------------------------------------------------
+6. MODELO DE DADOS
+--------------------------------------------------------------------------------
+
+6.1 Tabelas existentes (manter)
+
+  cotacoes(id, ticker, data, hora_coleta, preco, volume, market_cap,
+           preco_lucro, lucro_por_acao)
+      Fonte: brapi. Serie temporal, um registro por coleta.
+
+  fundamentos(id, ticker, data, hora_coleta, pl, pvp, roe, roa, roic,
+              margem_liquida, margem_bruta, margem_ebitda, divida_patrimonio,
+              cagr_receita_5a, cagr_lucro_5a, UNIQUE(ticker, data))
+      Fonte: BolsAI. Um registro por ticker por dia.
+
+  posicoes(ticker, quantidade, preco_medio, data_atualizacao)
+      Estado atual da carteira.
+
+6.2 Tabelas novas
+
+  transacoes(id, ticker, tipo, quantidade, preco, data_operacao, taxas,
+             observacao)
+      Historico imutavel de todas as operacoes. Hoje `posicoes` guarda apenas o
+      estado final, o que impede reconstruir o resultado realizado. `posicoes`
+      passa a ser uma projecao derivada de `transacoes`.
+      REGRA: toda compra/venda grava em transacoes E atualiza posicoes.
+
+  snapshots_score(id, ticker, data_referencia, periodicidade,
+                  score_valuation, score_rentabilidade, score_crescimento,
+                  score_seguranca, score_fundamentalista, score_preco,
+                  score_geral, preco_referencia, sinal, criado_em,
+                  UNIQUE(ticker, data_referencia, periodicidade))
+      periodicidade: 'diario' | 'mensal'.
+      E a memoria do sistema: permite responder "como esse papel estava pontuado
+      em 01/06?" e plotar a evolucao do score.
+
+  config_scoring(chave, valor, atualizado_em)
+      Pesos de categoria, pesos fundamentalista/preco e limiares de sinal
+      persistidos, para ajuste pela interface sem editar codigo.
+
+  log_coleta(id, executado_em, fonte, ticker, status, mensagem)
+      Auditoria de coleta: o que falhou, quando e por que.
+
+6.3 Chave de integracao
+  O join entre as duas fontes e feito por `ticker` (ja funcionando).
+  Padronizacao obrigatoria: ticker sempre MAIUSCULO, sem sufixo ".SA",
+  sem espacos. Normalizar na escrita, nunca so na leitura.
+
+
+--------------------------------------------------------------------------------
+7. REQUISITOS FUNCIONAIS
+--------------------------------------------------------------------------------
+
+RF-01  COLETA DE COTACOES (existe, melhorar)
+  Coletar preco, volume, market cap, P/L e LPA de todos os tickers da whitelist
+  a cada N minutos (default 60), gravando em `cotacoes`.
+  Melhorias: timeout e retry com backoff; nao coletar fora do pregao
+  (seg-sex, 10h-18h, dias uteis); registrar falhas em `log_coleta`;
+  usar o endpoint em lote da brapi (varios tickers por chamada) para reduzir
+  requisicoes.
+
+RF-02  COLETA DE FUNDAMENTOS (existe)
+  Uma coleta por ticker por dia, com verificacao previa via
+  `ja_tem_fundamento_hoje`. Manter INSERT OR IGNORE + UNIQUE(ticker, data).
+
+RF-03  WHITELIST DINAMICA (existe)
+  Universo monitorado = WHITELIST_BASE UNIAO tickers com posicao > 0.
+  Adicionar: incluir/remover ticker da base pela interface, persistido em tabela
+  (hoje esta hardcoded no arquivo).
+
+RF-04  SCORE FUNDAMENTALISTA (existe, formalizar)
+  Normalizacao min-max por indicador dentro do universo, respeitando a direcao
+  (maior melhor / menor melhor), agregacao por categoria e media ponderada:
+     valuation 25% | rentabilidade 25% | crescimento 25% | seguranca 25%
+  Saida em escala 0-100.
+  Ajuste necessario: min-max e sensivel a outlier (um P/L de 300 achata todo o
+  resto). Adotar winsorizacao nos percentis 5 e 95 antes de normalizar, ou
+  ranking percentual. Definir e documentar a escolha.
+  Ajuste necessario: P/L e P/VP negativos (prejuizo) hoje viram "score alto".
+  Tratar valores negativos como pior caso, nao como melhor.
+
+RF-05  SCORE DE PRECO (existe, melhorar)
+  Posicao do preco atual dentro do range historico, invertida (perto da minima =
+  score alto).
+  Limitacao atual: o range usa toda a base de cotacoes coletadas, que hoje tem
+  poucos dias. Definir janela explicita (ex.: 52 semanas) e exigir minimo de
+  observacoes; abaixo desse minimo, retornar score neutro (50) e sinalizar
+  "dados insuficientes" em vez de fingir precisao.
+
+RF-06  SCORE GERAL (existe)
+  score_geral = 0.6 * score_fundamentalista + 0.4 * score_preco.
+  Pesos configuraveis via `config_scoring`.
+
+RF-07  SINAIS DE COMPRA / MANTER / VENDA (novo)
+  Regras baseadas em limiares configuraveis, sempre com justificativa textual:
+    COMPRA        : score_fundamentalista >= 60 E score_preco >= 70
+    ACOMPANHAR    : score_fundamentalista >= 60 E 40 <= score_preco < 70
+    MANTER        : demais casos com posicao aberta
+    VENDA (caro)  : posicao aberta E score_preco <= 20
+    VENDA (tese)  : posicao aberta E score_fundamentalista caiu >= 15 pontos
+                    frente ao snapshot de 30 dias atras
+    EVITAR        : sem posicao E score_geral < 40
+  A tela deve exibir sempre: sinal + os numeros que o geraram.
+  Nenhum sinal dispara acao automatica.
+
+RF-08  CARTEIRA E RESULTADO (novo)
+  Para cada posicao:
+    valor_investido   = quantidade * preco_medio
+    valor_atual       = quantidade * ultimo_preco
+    lucro_absoluto    = valor_atual - valor_investido
+    lucro_relativo(%) = lucro_absoluto / valor_investido * 100
+  Consolidado da carteira: total investido, valor atual, PnL absoluto e
+  percentual, e peso (%) de cada ativo na carteira.
+  Resultado realizado calculado a partir de `transacoes` (vendas x preco medio
+  na data da venda).
+
+RF-09  SNAPSHOTS E COMPARACAO HISTORICA (novo)
+  Ao fim de cada dia util, gravar em `snapshots_score` a foto do score de cada
+  ticker (periodicidade 'diario'). No ultimo dia util do mes, gravar tambem a
+  versao 'mensal'.
+  A interface deve permitir: comparar score atual vs snapshot de X dias/meses
+  atras, com delta por categoria, e plotar a serie do score_geral.
+  Exportacao dos snapshots para CSV/Parquet em `exports/`.
+
+RF-10  INTERFACE VISUAL (novo)
+  Dashboard Streamlit rodando local (`streamlit run src/app.py`), com abas:
+    1. Visao geral  - cards de resumo da carteira (investido, atual, PnL %),
+                      contagem de sinais.
+    2. Ranking      - tabela ordenada por score_geral, colunas de score por
+                      categoria, preco atual, sinal, com filtros e busca.
+                      Escala de cor por score.
+    3. Carteira     - posicoes, preco medio, preco atual, lucro relativo,
+                      peso na carteira, sinal.
+    4. Ativo        - drill-down de um ticker: serie de preco, tabela de
+                      indicadores, evolucao historica do score, sinal atual
+                      com justificativa.
+    5. Historico    - comparacao entre datas, deltas de score, exportacao.
+    6. Config       - pesos, limiares de sinal, gestao da whitelist.
+  Atualizacao: botao "atualizar agora" + refresh automatico opcional.
+
+RF-11  REGISTRO DE OPERACOES (existe em CLI, estender)
+  Manter os comandos buy/sell no terminal e adicionar formulario equivalente no
+  dashboard. Toda operacao grava em `transacoes` e recalcula `posicoes`.
+
+RF-12  BANCADA DE PESQUISA (existe, isolar)
+  `analise.ipynb` continua livre para exploracao (descritiva, correlacao, PCA,
+  ADF, ACF/PACF, ARIMA). Regra: o notebook LE do banco e nunca escreve. Funcoes
+  que amadurecerem e forem promovidas ao pipeline migram para `scoring.py` com
+  teste.
+
+
+--------------------------------------------------------------------------------
+8. REQUISITOS NAO FUNCIONAIS
+--------------------------------------------------------------------------------
+
+RNF-01 Execucao local, sem dependencia de servidor externo alem das duas APIs.
+RNF-02 Tokens somente em .env; .env e data/ no .gitignore.
+RNF-03 Caminho do banco resolvido de forma absoluta a partir da raiz do projeto
+       (hoje "../data/acoes.db" quebra dependendo de onde o script roda).
+RNF-04 Dashboard carrega em ate 3s com ate 50 tickers e 12 meses de historico.
+RNF-05 Falha em uma API nao derruba o processo nem corrompe o banco; erro fica
+       registrado em log_coleta e o ativo aparece como "dado desatualizado".
+RNF-06 Respeitar limites de requisicao das APIs (coleta em lote, intervalo
+       configuravel, sem retry agressivo).
+RNF-07 Codigo em portugues, consistente com o que ja existe.
+RNF-08 Testes minimos para: normalizacao, calculo de preco medio, calculo de
+       lucro relativo e regras de sinal.
+RNF-09 Backup automatico do arquivo .db antes de migracoes de schema.
+
+
+--------------------------------------------------------------------------------
+9. ROADMAP POR FASES
+--------------------------------------------------------------------------------
+
+FASE 0 - Consolidacao (concluida)
+  Coleta das duas APIs, banco estruturado, join por ticker, CLI de carteira,
+  score fundamentalista e de preco, notebook de analise.
+
+FASE 1 - Fundacao de dados (proximo passo)
+  - Migrar caminho do banco para absoluto e criar src/config de paths.
+  - Criar tabelas transacoes, snapshots_score, config_scoring, log_coleta.
+  - Backfill de transacoes a partir das posicoes atuais.
+  - Extrair a logica de score de analise.py para scoring.py.
+  Entrega: base pronta para historico, pipeline separado da pesquisa.
+
+FASE 2 - Motor de score e carteira
+  - Winsorizacao / tratamento de outliers e de indicadores negativos.
+  - Janela explicita no score de preco + flag de dados insuficientes.
+  - carteira.py com PnL absoluto, relativo, alocacao e resultado realizado.
+  - sinais.py com as regras da RF-07 e justificativa textual.
+  Entrega: ranking confiavel + carteira com resultado.
+
+FASE 3 - Historico e snapshots
+  - snapshots.py com job diario e consolidacao mensal.
+  - Comparacao entre datas e deltas por categoria.
+  - Exportacao para CSV/Parquet.
+  Entrega: memoria do sistema funcionando.
+
+FASE 4 - Interface visual
+  - Dashboard Streamlit com as 6 abas da RF-10.
+  - Formulario de compra/venda.
+  - Tela de configuracao de pesos e limiares.
+  Entrega: acompanhamento visual sem terminal.
+
+FASE 5 - Robustez e automacao
+  - Retry, timeout, respeito ao horario de pregao, log de coleta.
+  - Substituir as variaveis globais `pausado`/`encerrar` por threading.Event.
+  - Agendamento do processo (tarefa do SO) e testes automatizados.
+  Entrega: roda sozinho e falha de forma previsivel.
+
+FASE 6 - Extensoes (backlog)
+  - Dividend yield e proventos.
+  - Comparacao setorial (score relativo ao setor, nao so ao universo).
+  - Alertas (notificacao quando um ativo entra em zona de compra/venda).
+  - Backtest simples: o score passado teria acertado?
+  - Integracao do ARIMA/SARIMAX como componente opcional do score temporal.
+  - Suporte a FIIs.
+
+
+--------------------------------------------------------------------------------
+10. BACKLOG PRIORIZADO
+--------------------------------------------------------------------------------
+
+Criterio de priorizacao:
+  P0 - Bloqueia ou corrompe: sem isso, dado se perde para sempre ou o numero
+       exibido esta errado. Fazer antes de qualquer coisa nova.
+  P1 - Entrega o valor central do produto (score confiavel + carteira + visual).
+  P2 - Robustez e operacao continua.
+  P3 - Extensoes desejaveis, sem urgencia.
+
+Coluna "Esforco": P = pequeno (ate ~1h), M = medio (algumas horas),
+G = grande (mais de um dia de trabalho intercalado).
+
+--- P0 - FAZER PRIMEIRO ----------------------------------------------------
+
+ ID    Item                                          Esforco  Ref
+ P0-1  Criar tabela `transacoes` + backfill a partir    M      DT-02, RF-11
+       das posicoes atuais; passar a gravar toda
+       compra/venda nela. Sem isso, cada venda apaga
+       historico que nao volta.
+ P0-2  Caminho absoluto do banco (paths.py na raiz),     P      DT-01, RNF-03
+       eliminando "../data/acoes.db" duplicado.
+ P0-3  Gravar data tambem em formato ISO                 P      DT-03
+       (YYYY-MM-DD) nas tabelas cotacoes e
+       fundamentos, para permitir ordenacao e filtro
+       em SQL.
+ P0-4  Corrigir pontuacao de P/L e P/VP negativos        P      DT-06, RF-04
+       (prejuizo nao e "barato").
+ P0-5  Restringir coleta ao horario de pregao            P      DT-09
+       (dias uteis, 10h-18h). Coleta 24h esta
+       poluindo a serie e distorcendo min/max.
+ P0-6  Backup automatico do .db antes de qualquer        P      RNF-09
+       migracao de schema.
+
+--- P1 - NUCLEO DO PRODUTO -------------------------------------------------
+
+ ID    Item                                          Esforco  Ref
+ P1-1  Extrair logica de score de analise.py para       M      RF-04, RF-06
+       src/scoring.py (pipeline separado da pesquisa).
+ P1-2  Winsorizacao (p5/p95) ou ranking percentual      M      DT-05, RF-04
+       antes da normalizacao min-max.
+ P1-3  Janela explicita no score de preco (ex.: 252     M      DT-04, RF-05
+       observacoes ou 52 semanas) + flag
+       "dados insuficientes" quando abaixo do minimo.
+ P1-4  Criar tabela `snapshots_score` e job de          M      RF-09
+       consolidacao diaria.
+ P1-5  src/carteira.py: valor investido, valor atual,   M      RF-08
+       lucro absoluto, lucro relativo, peso na
+       carteira, resultado realizado.
+ P1-6  src/sinais.py: regras compra/manter/venda com    M      RF-07
+       justificativa textual.
+ P1-7  Dashboard Streamlit - abas Visao geral,          G      RF-10
+       Ranking e Carteira (MVP visual).
+ P1-8  Ampliar whitelist para 20-30 tickers.            P      DT-11
+       Normalizacao relativa com 5 papeis nao tem
+       significado estatistico.
+ P1-9  Consolidacao mensal dos snapshots + aba          M      RF-09
+       Historico com comparacao entre datas.
+ P1-10 Aba Ativo (drill-down) e aba Config no           M      RF-10
+       dashboard; tabela `config_scoring`.
+
+--- P2 - ROBUSTEZ ----------------------------------------------------------
+
+ ID    Item                                          Esforco  Ref
+ P2-1  Timeout, retry com backoff e tratamento de       M      DT-08, RNF-05
+       status HTTP no coletor.
+ P2-2  Tabela `log_coleta` + marcacao de "dado          P      RF-01, RNF-05
+       desatualizado" na interface.
+ P2-3  Endpoint em lote da brapi (varios tickers por    P      DT-10, RNF-06
+       requisicao).
+ P2-4  Trocar globais `pausado`/`encerrar` por          P      DT-07
+       threading.Event.
+ P2-5  Testes minimos: normalizacao, preco medio,       M      RNF-08
+       lucro relativo, regras de sinal.
+ P2-6  Whitelist persistida em tabela, editavel pela    P      RF-03
+       interface (hoje hardcoded).
+ P2-7  Formulario de compra/venda no dashboard.         P      RF-11
+ P2-8  Agendamento pelo SO (Task Scheduler / cron) no   P      Fase 5
+       lugar do loop em thread.
+ P2-9  Converter test_bolsai.py em teste de             P      DT-12
+       integracao de verdade.
+
+--- P3 - EXTENSOES ---------------------------------------------------------
+
+ ID    Item                                          Esforco  Ref
+ P3-1  Dividend yield e proventos.                      M      Q4
+ P3-2  Comparacao setorial (score relativo ao setor).   G      Q5
+ P3-3  Alertas de entrada em zona de compra/venda.      M      Fase 6
+ P3-4  Backfill de precos historicos (serie longa       M      R4
+       para ARIMA fazer sentido).
+ P3-5  Backtest simples do score.                       G      Fase 6
+ P3-6  ARIMA/SARIMAX como componente opcional do        G      Q3
+       score.
+ P3-7  Suporte a FIIs.                                  G      Fase 6
+
+Ordem sugerida de execucao:
+  P0-2 -> P0-6 -> P0-1 -> P0-3 -> P0-4 -> P0-5 -> P1-8 -> P1-1 -> P1-2 ->
+  P1-3 -> P1-5 -> P1-6 -> P1-4 -> P1-7 -> P1-9 -> P1-10 -> P2-*
+(P0-2 e P0-6 primeiro porque tornam seguras todas as mudancas seguintes;
+ P1-8 antes dos ajustes de score porque muda a base de comparacao.)
+
+
+--------------------------------------------------------------------------------
+11. DIVIDAS TECNICAS E RISCOS IDENTIFICADOS
+--------------------------------------------------------------------------------
+
+DT-01 Caminho relativo do banco ("../data/acoes.db") repetido em banco.py e
+      analise.py; quebra conforme o diretorio de execucao.
+DT-02 `posicoes` guarda so o estado final; sem `transacoes` nao ha como apurar
+      resultado realizado nem reconstruir o historico.
+DT-03 Datas gravadas como texto "%d/%m/%Y", o que impede ordenacao e filtro por
+      data em SQL. Sugerido gravar tambem uma coluna ISO (YYYY-MM-DD) ou migrar.
+DT-04 Score de preco usa toda a base coletada como range; com poucos dias de
+      historico o numero e enganoso.
+DT-05 Min-max sem tratamento de outlier distorce todo o universo.
+DT-06 P/L e P/VP negativos sao pontuados como "baratos" indevidamente.
+DT-07 Variaveis globais `pausado` e `encerrar` compartilhadas entre threads sem
+      sincronizacao; trocar por threading.Event.
+DT-08 `buscar_dados_acao` e `buscar_fundamentos` sem timeout, retry ou
+      tratamento de status HTTP; uma API lenta trava o loop de coleta.
+DT-09 Coleta roda 24h; fora do pregao gera linhas repetidas que poluem a serie
+      temporal e distorcem min/max.
+DT-10 Uma requisicao por ticker na brapi; o endpoint em lote reduz consumo de
+      cota.
+DT-11 Universo pequeno (5 tickers base): PCA e normalizacao relativa perdem
+      significado estatistico. Ampliar a whitelist antes de confiar nos scores.
+DT-12 test_bolsai.py e script solto; converter em teste de integracao real.
+
+RISCOS
+  R1. Mudanca de contrato ou de plano das APIs (brapi/BolsAI) quebra a coleta.
+      Mitigacao: camada de adaptacao no coletor + log de coleta.
+  R2. Estouro de cota gratuita das APIs.
+      Mitigacao: coleta em lote, intervalo configuravel, cache diario dos
+      fundamentos (ja implementado).
+  R3. Excesso de confianca no score. O score e um organizador de atencao, nao
+      uma recomendacao. A interface deve deixar isso explicito e sempre mostrar
+      os numeros por tras do sinal.
+  R4. Historico curto limita qualquer analise temporal (ARIMA precisa de serie
+      relevante). Considerar backfill de precos historicos.
+
+
+--------------------------------------------------------------------------------
+12. METRICAS DE SUCESSO
+--------------------------------------------------------------------------------
+
+  M1. Coleta rodando sem intervencao manual por 30 dias seguidos, com taxa de
+      sucesso >= 95% das execucoes agendadas.
+  M2. Snapshot diario gravado em 100% dos dias uteis.
+  M3. Tempo para responder "como esta minha carteira hoje?" abaixo de 10s,
+      contra o processo manual atual.
+  M4. Todas as decisoes de compra/venda passam a ser tomadas olhando o
+      dashboard.
+  M5. Possibilidade de comparar qualquer ticker com seu score de 1, 3 e 6 meses
+      atras.
+
+
+--------------------------------------------------------------------------------
+13. QUESTOES EM ABERTO
+--------------------------------------------------------------------------------
+
+  Q1. Quantos tickers a whitelist deve ter no alvo? (impacta validade estatistica
+      da normalizacao e consumo de cota das APIs)
+  Q2. O score de preco deve usar janela de 52 semanas, 6 meses ou desde o inicio
+      da coleta?
+  Q3. A analise estatistica (PCA/ARIMA) entra no score geral como terceiro
+      componente, ou permanece exploratoria no notebook?
+  Q4. Proventos e dividend yield entram no score de rentabilidade ou como
+      categoria propria?
+  Q5. Comparacao de indicadores deve ser contra todo o universo ou contra o
+      setor do ativo? (P/L de banco vs P/L de mineradora nao sao comparaveis)
+  Q6. Streamlit atende, ou vale um front separado (FastAPI + React) mais adiante?
+  Q7. Onde registrar taxas e IR nas vendas para o resultado realizado ficar fiel?
+
+================================================================================
+FIM DO DOCUMENTO
+================================================================================

@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-CAMINHO_BANCO = "../data/acoes.db"
+from paths import CAMINHO_BANCO
 
 
 def carregar_fundamentos():

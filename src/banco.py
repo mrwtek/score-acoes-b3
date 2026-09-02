@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-CAMINHO_BANCO = "../data/acoes.db"
+from paths import CAMINHO_BANCO
 
 
 def hoje():

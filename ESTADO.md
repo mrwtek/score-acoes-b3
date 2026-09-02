@@ -26,11 +26,11 @@ orienta quando você voltar ao projeto depois de um tempo parado.
 
 ## Antes de começar (setup do fluxo de trabalho)
 
-- [ ] `git init` + primeiro commit do estado atual
+- [x] `git init` + primeiro commit do estado atual
 - [ ] `.gitignore` com `.env`, `data/*.db`, `__pycache__/`,
       `.ipynb_checkpoints/`, `exports/`
-- [ ] Salvar `CLAUDE.md`, `ESTADO.md` e `PRD_analise_acoes.txt` na raiz
-- [ ] Criar `DECISOES.md` (vazio, append-only)
+- [x] Salvar `CLAUDE.md`, `ESTADO.md` e `PRD_acoes.txt` na raiz
+- [x] Criar `DECISOES.md` (vazio, append-only)
 
 ## Em andamento
 
