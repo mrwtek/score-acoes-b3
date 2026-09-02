@@ -32,16 +32,19 @@ orienta quando você voltar ao projeto depois de um tempo parado.
 - [x] Salvar `CLAUDE.md`, `ESTADO.md` e `PRD_acoes.txt` na raiz
 - [x] Criar `DECISOES.md` (vazio, append-only)
 
-## Em andamento
+## Concluído
+- [x] P0-2 caminho absoluto do banco (src/paths.py) — commit c54ab82
+- [x] P0-6 backup automático do banco (throttle diário) — paths.py
 
-- [ ] nada ainda — próxima tarefa é P0-2
+## Em andamento
+- [ ] nada — próxima é P0-1
 
 ## Próximas tarefas (ordem da seção 10 do PRD)
 
-- [ ] **P0-2** `paths.py` na raiz; eliminar `"../data/acoes.db"` hardcoded
+- [x] **P0-2** `paths.py` na raiz; eliminar `"../data/acoes.db"` hardcoded
       *Aceite:* `banco.py`, `analise.py` e o notebook abrem o banco rodando de
       qualquer diretório.
-- [ ] **P0-6** backup automático do `.db` antes de migração de schema
+- [x] **P0-6** backup automático do `.db` antes de migração de schema
       *Aceite:* função de backup gera cópia com timestamp em `data/backups/`.
 - [ ] **P0-1** tabela `transacoes` + backfill das posições atuais
       *Aceite:* uma compra e uma venda geram 2 linhas corretas em `transacoes`,

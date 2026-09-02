@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-from paths import CAMINHO_BANCO
+from paths import CAMINHO_BANCO, fazer_backup
 
 
 def hoje():
@@ -9,6 +9,8 @@ def hoje():
 
 
 def criar_tabelas():
+    fazer_backup()
+
     conexao = sqlite3.connect(CAMINHO_BANCO)
     cursor = conexao.cursor()
 
