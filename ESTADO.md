@@ -35,9 +35,12 @@ orienta quando você voltar ao projeto depois de um tempo parado.
 ## Concluído
 - [x] P0-2 caminho absoluto do banco (src/paths.py) — commit c54ab82
 - [x] P0-6 backup automático do banco (throttle diário) — paths.py
+- [x] P0-1 tabela `transacoes` + backfill das posições atuais.
+- [x] config.py: caminho explícito do .env + falha imediata se token faltar
+- [x] limpeza da posição de teste TESTE3
 
 ## Em andamento
-- [ ] nada — próxima é P0-1
+
 
 ## Próximas tarefas (ordem da seção 10 do PRD)
 
@@ -46,7 +49,7 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       qualquer diretório.
 - [x] **P0-6** backup automático do `.db` antes de migração de schema
       *Aceite:* função de backup gera cópia com timestamp em `data/backups/`.
-- [ ] **P0-1** tabela `transacoes` + backfill das posições atuais
+- [x] **P0-1** tabela `transacoes` + backfill das posições atuais
       *Aceite:* uma compra e uma venda geram 2 linhas corretas em `transacoes`,
       e `posicoes` continua funcionando como antes.
 - [ ] **P0-3** gravar data também em ISO (`YYYY-MM-DD`)
@@ -89,3 +92,7 @@ Referência: seção 13 do PRD (questões em aberto).
 - Ver ranking: `python src/analise.py`
 - Backup manual do banco antes de mexer em schema:
   `cp data/acoes.db data/acoes_backup_AAAAMMDD.db`
+  - 02/09: .env foi encontrado fora do lugar (em exports/) e causou falha
+  silenciosa de token em ambas as APIs por um tempo. Restaurado. Ainda falta
+  o ajuste combinado em config.py para falhar de forma explicita se o
+  token vier vazio (ver DECISOES.md).

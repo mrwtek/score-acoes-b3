@@ -71,8 +71,19 @@ def criar_tabelas():
         )
     """)
 
+    _adicionar_coluna_se_faltar(cursor, "cotacoes", "data_hora_iso", "TEXT")
+    _adicionar_coluna_se_faltar(cursor, "fundamentos", "data_hora_iso", "TEXT")
+    _adicionar_coluna_se_faltar(cursor, "transacoes", "data_operacao_iso", "TEXT")
+
     conexao.commit()
     conexao.close()
+
+
+def _adicionar_coluna_se_faltar(cursor, tabela, coluna, tipo):
+    cursor.execute(f"PRAGMA table_info({tabela})")
+    colunas_existentes = [linha[1] for linha in cursor.fetchall()]
+    if coluna not in colunas_existentes:
+        cursor.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
 
 
 def salvar_cotacoes(lista_dados):
@@ -82,8 +93,8 @@ def salvar_cotacoes(lista_dados):
 
     for dados in lista_dados:
         cursor.execute("""
-            INSERT INTO cotacoes (ticker, data, hora_coleta, preco, volume, market_cap, preco_lucro, lucro_por_acao)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO cotacoes (ticker, data, hora_coleta, preco, volume, market_cap, preco_lucro, lucro_por_acao, data_hora_iso)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             dados.get("symbol"),
             agora.strftime("%d/%m/%Y"),
@@ -93,6 +104,7 @@ def salvar_cotacoes(lista_dados):
             dados.get("marketCap"),
             dados.get("priceEarnings"),
             dados.get("earningsPerShare"),
+            agora.strftime("%Y-%m-%d %H:%M:%S"),
         ))
 
     conexao.commit()
@@ -121,9 +133,9 @@ def salvar_fundamento(ticker, dados):
         INSERT OR IGNORE INTO fundamentos (
             ticker, data, hora_coleta, pl, pvp, roe, roa, roic,
             margem_liquida, margem_bruta, margem_ebitda,
-            divida_patrimonio, cagr_receita_5a, cagr_lucro_5a
+            divida_patrimonio, cagr_receita_5a, cagr_lucro_5a, data_hora_iso
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         ticker,
         agora.strftime("%d/%m/%Y"),
@@ -139,6 +151,7 @@ def salvar_fundamento(ticker, dados):
         dados.get("debt_equity"),
         dados.get("cagr_revenue_5y"),
         dados.get("cagr_earnings_5y"),
+        agora.strftime("%Y-%m-%d %H:%M:%S"),
     ))
 
     conexao.commit()
@@ -160,7 +173,9 @@ def registrar_compra(ticker, quantidade, preco):
         nova_quantidade = quantidade_atual + quantidade
         novo_preco_medio = ((quantidade_atual * preco_medio_atual) + (quantidade * preco)) / nova_quantidade
 
-    data_operacao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    agora = datetime.now()
+    data_operacao = agora.strftime("%d/%m/%Y %H:%M:%S")
+    data_operacao_iso = agora.strftime("%Y-%m-%d %H:%M:%S")
 
     cursor.execute("""
         INSERT INTO posicoes (ticker, quantidade, preco_medio, data_atualizacao)
@@ -172,9 +187,9 @@ def registrar_compra(ticker, quantidade, preco):
     """, (ticker, nova_quantidade, novo_preco_medio, data_operacao))
 
     cursor.execute("""
-        INSERT INTO transacoes (ticker, tipo, quantidade, preco, data_operacao, taxas, observacao)
-        VALUES (?, 'compra', ?, ?, ?, NULL, NULL)
-    """, (ticker, quantidade, preco, data_operacao))
+        INSERT INTO transacoes (ticker, tipo, quantidade, preco, data_operacao, taxas, observacao, data_operacao_iso)
+        VALUES (?, 'compra', ?, ?, ?, NULL, NULL, ?)
+    """, (ticker, quantidade, preco, data_operacao, data_operacao_iso))
 
     conexao.commit()
     conexao.close()
@@ -200,7 +215,9 @@ def registrar_venda(ticker, quantidade):
         return
 
     nova_quantidade = quantidade_atual - quantidade
-    data_operacao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    agora = datetime.now()
+    data_operacao = agora.strftime("%d/%m/%Y %H:%M:%S")
+    data_operacao_iso = agora.strftime("%Y-%m-%d %H:%M:%S")
 
     if nova_quantidade == 0:
         cursor.execute("DELETE FROM posicoes WHERE ticker = ?", (ticker,))
@@ -213,9 +230,9 @@ def registrar_venda(ticker, quantidade):
         print(f"Venda registrada: {ticker} agora com {nova_quantidade} acoes (preco medio mantido em R$ {preco_medio_atual:.2f}).")
 
     cursor.execute("""
-        INSERT INTO transacoes (ticker, tipo, quantidade, preco, data_operacao, taxas, observacao)
-        VALUES (?, 'venda', ?, ?, ?, NULL, NULL)
-    """, (ticker, quantidade, preco_medio_atual, data_operacao))
+        INSERT INTO transacoes (ticker, tipo, quantidade, preco, data_operacao, taxas, observacao, data_operacao_iso)
+        VALUES (?, 'venda', ?, ?, ?, NULL, NULL, ?)
+    """, (ticker, quantidade, preco_medio_atual, data_operacao, data_operacao_iso))
 
     conexao.commit()
     conexao.close()
