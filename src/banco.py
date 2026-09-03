@@ -58,6 +58,19 @@ def criar_tabelas():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS transacoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            quantidade INTEGER NOT NULL,
+            preco REAL NOT NULL,
+            data_operacao TEXT NOT NULL,
+            taxas REAL,
+            observacao TEXT
+        )
+    """)
+
     conexao.commit()
     conexao.close()
 
@@ -147,6 +160,8 @@ def registrar_compra(ticker, quantidade, preco):
         nova_quantidade = quantidade_atual + quantidade
         novo_preco_medio = ((quantidade_atual * preco_medio_atual) + (quantidade * preco)) / nova_quantidade
 
+    data_operacao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
     cursor.execute("""
         INSERT INTO posicoes (ticker, quantidade, preco_medio, data_atualizacao)
         VALUES (?, ?, ?, ?)
@@ -154,7 +169,12 @@ def registrar_compra(ticker, quantidade, preco):
             quantidade = excluded.quantidade,
             preco_medio = excluded.preco_medio,
             data_atualizacao = excluded.data_atualizacao
-    """, (ticker, nova_quantidade, novo_preco_medio, datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+    """, (ticker, nova_quantidade, novo_preco_medio, data_operacao))
+
+    cursor.execute("""
+        INSERT INTO transacoes (ticker, tipo, quantidade, preco, data_operacao, taxas, observacao)
+        VALUES (?, 'compra', ?, ?, ?, NULL, NULL)
+    """, (ticker, quantidade, preco, data_operacao))
 
     conexao.commit()
     conexao.close()
@@ -180,6 +200,7 @@ def registrar_venda(ticker, quantidade):
         return
 
     nova_quantidade = quantidade_atual - quantidade
+    data_operacao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     if nova_quantidade == 0:
         cursor.execute("DELETE FROM posicoes WHERE ticker = ?", (ticker,))
@@ -188,8 +209,13 @@ def registrar_venda(ticker, quantidade):
         cursor.execute("""
             UPDATE posicoes SET quantidade = ?, data_atualizacao = ?
             WHERE ticker = ?
-        """, (nova_quantidade, datetime.now().strftime("%d/%m/%Y %H:%M:%S"), ticker))
+        """, (nova_quantidade, data_operacao, ticker))
         print(f"Venda registrada: {ticker} agora com {nova_quantidade} acoes (preco medio mantido em R$ {preco_medio_atual:.2f}).")
+
+    cursor.execute("""
+        INSERT INTO transacoes (ticker, tipo, quantidade, preco, data_operacao, taxas, observacao)
+        VALUES (?, 'venda', ?, ?, ?, NULL, NULL)
+    """, (ticker, quantidade, preco_medio_atual, data_operacao))
 
     conexao.commit()
     conexao.close()
