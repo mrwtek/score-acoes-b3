@@ -3,15 +3,16 @@
 ## O que é
 
 App local em Python que coleta cotações e indicadores fundamentalistas de uma
-whitelist de ações brasileiras, guarda em SQLite, calcula um score de "boa e
-barata" e (em breve) mostra num dashboard.
+whitelist de ações brasileiras, guarda em SQLite, calcula scores de qualidade e
+de preço, e (em breve) mostra num dashboard.
 
 O sistema **não executa ordens e não decide nada**. Ele automatiza coleta,
 cálculo e visualização. Toda decisão de compra e venda é minha.
 
-Especificação completa: `PRD_analise_acoes.txt`
-Onde parei: `ESTADO.md`
-Backlog priorizado: seção 10 do PRD (itens P0/P1/P2/P3)
+Especificação completa: `PRD_analise_acoes.txt` (v1.2)
+Metodologia do score: **seção 7A do PRD** — leia antes de mexer em scoring
+Onde parei / próxima tarefa: `ESTADO.md`
+Por que as coisas são como são: `DECISOES.md`
 
 ## Quem sou eu
 
@@ -22,24 +23,30 @@ trade-off antes de decidir por mim.
 
 ## Estrutura de arquivos
 
-Atual:
-
     src/
-      config.py               tokens BRAPI_TOKEN e BOLSAI_TOKEN via .env
+      paths.py                caminhos absolutos (banco, .env, backups) +
+                              fazer_backup() com throttle diário
+      config.py               tokens via .env; falha imediata se faltar token
       whitelist.py            universo = WHITELIST_BASE ∪ tickers em carteira
       coletor.py              chamadas às duas APIs
-      banco.py                SQLite: cotações, fundamentos, posições
+      banco.py                SQLite: criar_tabelas, salvar/registrar
       main.py                 loop de coleta em thread + CLI
       gerenciar_posicoes.py   CLI de carteira (buy/sell/show)
-      analise.py              cálculo dos scores
+      analise.py              cálculo dos scores (será extraído p/ scoring.py)
+      backfill_transacoes.py  script de uso único, já executado
+      migrar_datas_iso.py     script de uso único, já executado
       test_bolsai.py          script solto de teste manual da API BolsAI
+      test_valuation.py       testes do P0-4 (rodar: python test_valuation.py)
+      test_pregao.py          testes do P0-5 (rodar: python test_pregao.py)
     data/
       acoes.db                banco SQLite
+      backups/                cópias automáticas com timestamp
     notebooks/
       analise.ipynb           pesquisa livre (PCA, ADF, ACF/PACF, ARIMA)
+    .env                      NA RAIZ, não em subpasta (já causou bug)
 
-Alvo (conforme o PRD vai sendo executado): `scoring.py`, `carteira.py`,
-`sinais.py`, `snapshots.py`, `app.py` (Streamlit), `paths.py`.
+A criar conforme o backlog: `scoring.py`, `carteira.py`, `sinais.py`,
+`snapshots.py`, `app.py` (Streamlit).
 
 ## Fontes de dados
 
@@ -57,33 +64,64 @@ Resposta usada: `pl`, `pvp`, `roe`, `roa`, `roic`, `net_margin`, `gross_margin`,
 O **join entre as duas fontes é sempre por `ticker`**, em maiúsculo, sem sufixo
 `.SA` e sem espaços. Normalizar na escrita, nunca só na leitura.
 
+**Limite de plano, não bug:** a cobertura de tickers da brapi depende do plano
+contratado, e a BolsAI tem cota diária no free. Se um ticker falhar com "token
+não fornecido" enquanto outros funcionam na mesma execução, suspeite do plano
+antes do código.
+
 ## Esquema do banco (data/acoes.db)
 
-    cotacoes(id, ticker, data, hora_coleta, preco, volume, market_cap,
-             preco_lucro, lucro_por_acao)
-        série temporal, um registro por coleta
+    cotacoes(id, ticker, data, hora_coleta, data_hora_iso, preco, volume,
+             market_cap, preco_lucro, lucro_por_acao)
 
-    fundamentos(id, ticker, data, hora_coleta, pl, pvp, roe, roa, roic,
-                margem_liquida, margem_bruta, margem_ebitda, divida_patrimonio,
-                cagr_receita_5a, cagr_lucro_5a, UNIQUE(ticker, data))
+    fundamentos(id, ticker, data, hora_coleta, data_hora_iso, pl, pvp, roe,
+                roa, roic, margem_liquida, margem_bruta, margem_ebitda,
+                divida_patrimonio, cagr_receita_5a, cagr_lucro_5a,
+                UNIQUE(ticker, data))
         um registro por ticker por dia; dedupe via ja_tem_fundamento_hoje()
 
     posicoes(ticker, quantidade, preco_medio, data_atualizacao)
-        estado atual da carteira; preço médio ponderado no registrar_compra()
+        estado atual da carteira; preço médio ponderado em registrar_compra()
 
-Datas hoje são texto no formato `%d/%m/%Y` e horas `%H:%M:%S` — o que impede
-ordenar e filtrar por data em SQL (item P0-3 do backlog).
+    transacoes(id, ticker, tipo, quantidade, preco, data_operacao,
+               data_operacao_iso, taxas, observacao)
+        histórico append-only; `taxas` = só corretagem/emolumentos (IR fora,
+        ver DECISOES.md)
 
-## Regras de lógica do score
+**Duas representações de data convivem de propósito.** As colunas `data` /
+`hora_coleta` / `data_operacao` seguem no formato brasileiro (`%d/%m/%Y`) e
+continuam sendo gravadas — `ja_tem_fundamento_hoje()` depende delas. As colunas
+`*_iso` (`YYYY-MM-DD HH:MM:SS`) são as que ordenam e filtram corretamente em
+SQL. Use as ISO para qualquer consulta nova.
 
-- Normalização min-max por indicador dentro do universo, respeitando a direção
-  (maior melhor / menor melhor), definida em `CATEGORIAS_FUNDAMENTALISTAS`.
-- Categorias e pesos: valuation 25% | rentabilidade 25% | crescimento 25% |
-  segurança 25% (`PESOS_CATEGORIA`).
-- Score de preço = posição do preço atual no range histórico, invertida
-  (perto da mínima = score alto).
-- `score_geral = 0.6 × score_fundamentalista + 0.4 × score_preco`.
-- Escala sempre 0–100.
+## Metodologia do score — leia a seção 7A do PRD antes de mexer
+
+Resumo. Quatro categorias usam **faixas absolutas** (a nota depende só do valor
+do indicador, nunca de quem está na whitelist); só valuation é relativo ao
+universo. Isso é o que torna os snapshots comparáveis ao longo do tempo.
+
+    rentabilidade   ROIC 40% | ROE 35% | ROA 25%          absoluto
+    margens         líquida 60% | EBITDA 40%              absoluto
+    crescimento     CAGR receita 60% | CAGR lucro 40%     absoluto
+    seguranca       dívida/patrimônio 100%                absoluto
+    valuation       E/P 50% | B/P 50%                     relativo
+
+- Valuation usa **earnings yield (1/pl)** e **book-to-market (1/pvp)**, ambos
+  "maior é melhor" — nunca P/L e P/VP diretos, que pontuam prejuízo como
+  "barato".
+- `score_geral` **não existe mais**. Ficam duas colunas independentes:
+  `score_fundamentalista` e `score_reversao`.
+- `score_reversao` (antigo `score_preco`) mede **queda de preço, não
+  barateamento**. É uma aposta contrária deliberada. Nunca descreva como
+  valuation.
+- Financeiras não pontuam dívida/PL, ROA nem margens: nota neutra com flag
+  `nao_aplicavel`, nunca 0.
+- Escala sempre 0–100. Faixas ancoradas ao custo de capital brasileiro
+  (Selic/inflação em `config_scoring`), não copiadas de tabela americana.
+
+O estado atual do código ainda **não** reflete tudo isso — a migração é o bloco
+P1-1 → P1-11 → P1-12 → P1-13 → P1-2 → P1-14 do backlog. Confira no `ESTADO.md`
+o que já foi feito antes de assumir qualquer coisa.
 
 ## Regras de trabalho
 
@@ -94,29 +132,33 @@ ordenar e filtrar por data em SQL (item P0-3 do backlog).
   vai mudar, em quais arquivos, o que pode quebrar.
 - Não inventar nomes de função ou coluna: leia o arquivo antes de referenciá-lo.
   Se precisar de algo que não existe, diga.
-- **Toda alteração de schema exige backup do .db antes.**
-- O notebook `analise.ipynb` **lê** do banco e nunca escreve. Função que
-  amadurecer lá migra para `scoring.py` com teste.
-- Bibliotecas já em uso: requests, python-dotenv, pandas, numpy, scikit-learn,
-  statsmodels, matplotlib, seaborn. Avisar antes de introduzir outra.
+- **Toda alteração de schema exige backup do .db antes.** `fazer_backup()` tem
+  throttle diário — se já rodei algo hoje, o backup do dia já foi "gasto";
+  nesse caso peça backup manual.
+- Mudanças em lógica de cálculo vêm com teste (`pytest`), no padrão do P0-4:
+  dados sintéticos, casos de borda explícitos, tabela de conferência manual
+  impressa no final.
+- O notebook `analise.ipynb` **lê** do banco e nunca escreve.
+- Bibliotecas em uso: requests, python-dotenv, pandas, numpy, scikit-learn,
+  statsmodels, matplotlib, seaborn, pytest. Avisar antes de introduzir outra.
 - Uma tarefa do backlog por vez. Terminou, commit.
 
-## Armadilhas conhecidas deste código
+## Armadilhas conhecidas (abertas)
 
-Não são bugs a corrigir de passagem — são itens do backlog. Cite se atrapalharem
-a tarefa atual, mas não conserte fora de hora.
+Não são bugs a corrigir de passagem — são itens do backlog. Cite se
+atrapalharem a tarefa atual, mas não conserte fora de hora.
 
-- `"../data/acoes.db"` está hardcoded em `banco.py`, `analise.py` e no notebook;
-  quebra conforme o diretório de execução (P0-2).
-- `posicoes` guarda só o estado final — não há histórico de operações (P0-1).
-- P/L e P/VP negativos (empresa com prejuízo) hoje pontuam como "baratos" (P0-4).
-- Coleta roda 24h, inclusive fora do pregão, poluindo a série e distorcendo
-  min/max (P0-5).
-- Score de preço usa toda a base coletada como range; com histórico curto o
-  número engana (P1-3).
-- Min-max sem tratamento de outlier: um P/L de 300 achata todo o resto (P1-2).
-- Whitelist tem 5 tickers — pouco para normalização relativa e PCA terem
-  significado estatístico (P1-8).
+- `normalizar()` faz `fillna(median)`: dado faltante vira nota média em
+  silêncio, sem aviso (P1-13).
+- Min-max sem tratamento de outlier nas categorias ainda não migradas; o pior
+  colocado sempre tira exatamente 0 e o melhor 100, o que é artefato e não
+  informação (P1-2, P1-11).
+- `score_reversao` usa toda a base coletada como range; com histórico curto o
+  número vira interruptor (0 ou 100) em vez de escala (P1-3).
+- Book-to-market não tem teto para P/VP próximo de zero — o earnings yield tem.
+  Será resolvido de forma geral pela winsorização (P1-2).
+- Whitelist pequena para normalização relativa e PCA terem significado
+  estatístico (P1-8).
 - `pausado` e `encerrar` são globais compartilhadas entre threads sem
   sincronização (P2-4).
 - Chamadas às APIs sem timeout, retry ou checagem de status HTTP (P2-1).
