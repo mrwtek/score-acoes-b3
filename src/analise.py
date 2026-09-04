@@ -35,7 +35,7 @@ def carregar_posicoes():
     return df
 
 CATEGORIAS_FUNDAMENTALISTAS = {
-    "valuation": {"pl": False, "pvp": False},
+    "valuation": {"earnings_yield": True, "book_to_market": True},
     "rentabilidade": {"roe": True, "roa": True, "roic": True, "margem_liquida": True, "margem_bruta": True, "margem_ebitda": True},
     "crescimento": {"cagr_receita_5a": True, "cagr_lucro_5a": True},
     "seguranca": {"divida_patrimonio": False},
@@ -47,6 +47,50 @@ PESOS_CATEGORIA = {
     "crescimento": 0.25,
     "seguranca": 0.25,
 }
+
+# Tetos das metricas derivadas. Servem para um ticker com P/L (ou P/VP) proximo
+# de zero nao gerar um yield gigante que reancora a escala do min-max e achata
+# todos os outros. As duas metricas tem escalas economicas diferentes, por isso
+# limites diferentes:
+#   earnings yield 1.0  -> P/L de 1, ou seja 100% de lucro sobre o preco;
+#                          acima disso e erro de dado, nao empresa barata.
+#   book-to-market 5.0  -> P/VP de 0,2. P/VP abaixo de 1 e comum e legitimo
+#                          (bancos brasileiros), entao o teto tem que ser folgado
+#                          o suficiente para nao empatar 0,6 com 1,0.
+LIMITE_YIELD = 1.0
+LIMITE_BOOK_TO_MARKET = 5.0
+
+# Trios (coluna do banco, coluna derivada, teto) da categoria valuation.
+METRICAS_VALUATION = (
+    ("pl", "earnings_yield", LIMITE_YIELD),
+    ("pvp", "book_to_market", LIMITE_BOOK_TO_MARKET),
+)
+
+# Colunas cruas e derivadas que o ranking mostra para conferencia manual.
+COLUNAS_VALUATION_EXIBICAO = ["pl", "pvp", "earnings_yield", "book_to_market"]
+
+
+def adicionar_metricas_valuation(df):
+    """Cria earnings_yield (1/pl) e book_to_market (1/pvp).
+
+    Invertendo a metrica, a direcao "maior e melhor" fica correta em todo o
+    dominio: empresa com prejuizo tem yield negativo e vai para o fim do
+    ranking, em vez de parecer barata so porque o P/L negativo e um numero
+    pequeno. Duas empresas com prejuizo tambem passam a ser comparaveis entre
+    si, sem nenhum caso especial no codigo.
+
+    P/L ou P/VP igual a zero implicaria preco zero (lucro zero manda o P/L para
+    o infinito, nao para zero), logo e dado corrompido e nao informacao
+    economica: vira NaN e cai no fillna(median) de normalizar(), junto com os
+    valores ausentes. Valores muito proximos de zero pelo lado positivo geram
+    yield gigante -- o clip no teto de cada metrica impede que um unico ticker
+    achate todos os outros na normalizacao.
+    """
+    df = df.copy()
+    for coluna_banco, coluna_derivada, teto in METRICAS_VALUATION:
+        valores = pd.to_numeric(df[coluna_banco], errors="coerce").replace(0, np.nan)
+        df[coluna_derivada] = (1 / valores).clip(-teto, teto)
+    return df
 
 
 def carregar_fundamentos_mais_recentes():
@@ -75,7 +119,7 @@ def normalizar(valor, maior_melhor):
 
 
 def calcular_score_fundamentalista():
-    df = carregar_fundamentos_mais_recentes()
+    df = adicionar_metricas_valuation(carregar_fundamentos_mais_recentes())
     scores_categoria = pd.DataFrame(index=df.index)
 
     for categoria, indicadores in CATEGORIAS_FUNDAMENTALISTAS.items():
@@ -92,6 +136,9 @@ def calcular_score_fundamentalista():
         scores_categoria[categoria] * peso
         for categoria, peso in PESOS_CATEGORIA.items()
     )
+
+    for coluna in COLUNAS_VALUATION_EXIBICAO:
+        scores_categoria[coluna] = df[coluna]
 
     return scores_categoria.sort_values("score_fundamentalista", ascending=False)
 
@@ -140,4 +187,9 @@ if __name__ == "__main__":
 
     print("\nRanking geral (fundamentalista + preco):\n")
     ranking = calcular_score_geral()
-    print(ranking.round(1).to_string())
+
+    # scores em 1 casa; yields em 4, senao 0,0823 apareceria como 0,1
+    ranking_exibicao = ranking.round(1)
+    colunas_derivadas = ["earnings_yield", "book_to_market"]
+    ranking_exibicao[colunas_derivadas] = ranking[colunas_derivadas].round(4)
+    print(ranking_exibicao.to_string())

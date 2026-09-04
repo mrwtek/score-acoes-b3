@@ -1,6 +1,6 @@
 ================================================================================
 PRD - PLATAFORMA PESSOAL DE ANALISE E SCORE DE ACOES (B3)
-Versao: 1.1 (inclui backlog priorizado - secao 10)
+Versao: 1.2 (inclui secao 7A - metodologia de score revisada)
 Data: 01/09/2026
 Autor: (voce)
 Status: Em desenvolvimento - MVP parcialmente implementado
@@ -241,28 +241,46 @@ RF-03  WHITELIST DINAMICA (existe)
   Adicionar: incluir/remover ticker da base pela interface, persistido em tabela
   (hoje esta hardcoded no arquivo).
 
-RF-04  SCORE FUNDAMENTALISTA (existe, formalizar)
-  Normalizacao min-max por indicador dentro do universo, respeitando a direcao
-  (maior melhor / menor melhor), agregacao por categoria e media ponderada:
-     valuation 25% | rentabilidade 25% | crescimento 25% | seguranca 25%
-  Saida em escala 0-100.
-  Ajuste necessario: min-max e sensivel a outlier (um P/L de 300 achata todo o
-  resto). Adotar winsorizacao nos percentis 5 e 95 antes de normalizar, ou
-  ranking percentual. Definir e documentar a escolha.
-  Ajuste necessario: P/L e P/VP negativos (prejuizo) hoje viram "score alto".
-  Tratar valores negativos como pior caso, nao como melhor.
+RF-04  SCORE FUNDAMENTALISTA (existe, REDESENHAR - ver secao 7A)
+  Estrutura em 5 categorias. Quatro delas usam FAIXAS ABSOLUTAS (nota depende
+  so do valor do indicador, nao de quem esta na whitelist); apenas valuation e
+  relativo ao universo. Saida em escala 0-100.
 
-RF-05  SCORE DE PRECO (existe, melhorar)
-  Posicao do preco atual dentro do range historico, invertida (perto da minima =
-  score alto).
-  Limitacao atual: o range usa toda a base de cotacoes coletadas, que hoje tem
-  poucos dias. Definir janela explicita (ex.: 52 semanas) e exigir minimo de
-  observacoes; abaixo desse minimo, retornar score neutro (50) e sinalizar
-  "dados insuficientes" em vez de fingir precisao.
+     rentabilidade   ROIC 40% | ROE 35% | ROA 25%          absoluto
+     margens         liquida 60% | EBITDA 40%              absoluto
+     crescimento     CAGR receita 60% | CAGR lucro 40%     absoluto
+     seguranca       divida/patrimonio 100%                absoluto
+     valuation       E/P 50% | B/P 50%                     relativo
 
-RF-06  SCORE GERAL (existe)
-  score_geral = 0.6 * score_fundamentalista + 0.4 * score_preco.
-  Pesos configuraveis via `config_scoring`.
+  Motivo da mudanca (detalhado na secao 7A): score integralmente relativo
+  impede comparacao historica - o snapshot de junho deixa de ser comparavel
+  com o de dezembro se a whitelist mudou. Como o objetivo O1 do produto e
+  justamente comparar scores no tempo, qualidade e seguranca precisam de
+  regua fixa.
+
+RF-05  SCORE DE REVERSAO (era "score de preco" - RENOMEAR)
+  Posicao do preco atual dentro do range historico, invertida (perto da minima
+  = score alto).
+  ATENCAO CONCEITUAL: isto NAO mede se a acao esta barata. Mede se ela caiu.
+  Uma acao pode cair 40% e ficar mais cara, se o lucro caiu 60%. O nome antigo
+  ("score_preco") sugeria valuation e induzia leitura errada.
+  E uma aposta contraria/reversao a media, deliberada. A literatura de fatores
+  (Asness, Moskowitz, Pedersen) aponta na direcao oposta: valor combinado com
+  momentum positivo de 6-12 meses tende a funcionar melhor que comprar o que
+  esta caindo. Manter como fator informativo, ciente do trade-off.
+  Limitacao atual: range usa toda a base coletada, que tem poucos dias. Definir
+  janela explicita (252 pregoes) e minimo de observacoes; abaixo do minimo,
+  retornar 50 com flag "dados insuficientes" em vez de fingir precisao.
+
+RF-06  SCORE GERAL - REMOVIDO
+  O composto score_geral = 0.6*fundamentalista + 0.4*reversao deixa de existir.
+  Motivo: as proprias regras de sinal (RF-07) ja usam os dois scores
+  separadamente, entao o composto nao era consumido por nada. Ele apenas
+  misturava "empresa boa" com "caiu recentemente" num numero unico que esconde
+  qual dos dois esta falando. Duas colunas independentes sao mais informativas.
+  Efeito colateral relevante do desenho antigo: 0.6*25% (valuation) + 40%
+  (preco) = 55% do score final era alguma forma de "esta barato", o que era um
+  vies de valor muito mais agressivo do que aparentava.
 
 RF-07  SINAIS DE COMPRA / MANTER / VENDA (novo)
   Regras baseadas em limiares configuraveis, sempre com justificativa textual:
@@ -320,6 +338,144 @@ RF-12  BANCADA DE PESQUISA (existe, isolar)
   ADF, ACF/PACF, ARIMA). Regra: o notebook LE do banco e nunca escreve. Funcoes
   que amadurecerem e forem promovidas ao pipeline migram para `scoring.py` com
   teste.
+
+
+--------------------------------------------------------------------------------
+7A. METODOLOGIA DE SCORE - ESPECIFICACAO DOS INDICADORES
+--------------------------------------------------------------------------------
+
+7A.1 PRINCIPIO: ABSOLUTO vs RELATIVO
+
+  Qualidade, crescimento e seguranca usam FAIXAS ABSOLUTAS. ROE de 18% e bom
+  independente de quem mais esta na lista; divida/PL de 4 e alta sempre.
+  Beneficio: o score de um ticker so muda quando a EMPRESA muda, nunca porque
+  a whitelist mudou. Isso e o que torna os snapshots (RF-09) comparaveis no
+  tempo - e o objetivo O1 do produto.
+
+  Valuation permanece RELATIVO ao universo, porque "caro" so existe em
+  comparacao.
+
+  Consequencia pratica: as faixas abaixo sao julgamento explicito e versionado,
+  nao efeito colateral de quem esta na whitelist hoje. Quando o ranking mudar,
+  da para saber se foi a empresa ou a regua.
+
+7A.2 ANCORAGEM AO CUSTO DE CAPITAL BRASILEIRO
+
+  As faixas NAO sao copiadas de tabela americana. ROE de 12% nos EUA e
+  aceitavel; no Brasil, com Selic de dois digitos, e uma empresa que rende
+  menos que titulo publico sem risco de acao. CAGR nominal de 4% com inflacao
+  de 4,5% e encolhimento real.
+  Guardar SELIC_REFERENCIA e INFLACAO_REFERENCIA em `config_scoring` e revisar
+  as faixas quando sairem do lugar. Nunca numero magico espalhado no codigo.
+
+7A.3 RENTABILIDADE (absoluto)   ROIC 40% | ROE 35% | ROA 25%
+
+    ROE          >=20% =100 | 15-20% =80 | 10-15% =55 | 5-10% =30 | 0-5% =10 | <0 =0
+    ROA          >=12% =100 |  8-12% =80 |  5-8%  =55 | 2-5%  =30 | 0-2% =10 | <0 =0
+    ROIC         >=20% =100 | 15-20% =80 | 10-15% =55 | 5-10% =25 | <5%  =0
+
+  ROIC tem o maior peso: mede retorno sobre o capital total empregado, entao
+  nao e inflado por alavancagem como o ROE.
+  O corte de ROIC em 5% nao e arbitrario: ROIC abaixo do custo de capital
+  significa que a empresa DESTROI valor ao crescer. No Brasil esse custo e
+  alto, entao 5-10% ja e zona de alerta, nao de conforto.
+  ROA de banco e estruturalmente baixo (1-2% e normal, efeito da alavancagem)
+  -> nao pontuar para financeiras.
+
+7A.4 MARGENS (absoluto)   liquida 60% | EBITDA 40%
+
+    margem_liquida  >=20% =100 | 12-20% =80 | 7-12% =55 | 3-7% =30 | 0-3% =10 | <0 =0
+    margem_ebitda   >=30% =100 | 20-30% =80 | 12-20%=55 | 5-12%=25 | <5%  =0
+
+  margem_bruta SAI do score (coluna continua no banco, sem custo). E o
+  indicador mais dependente de setor do conjunto: 25% e otimo para varejo e
+  pessimo para software. Sem ajuste setorial nao informa nada comparavel entre
+  VALE3 e ITUB4 - so adiciona ruido.
+  Margens liquida e EBITDA nao se aplicam a bancos (banco nao tem EBITDA no
+  sentido usual) -> nao pontuar para financeiras.
+
+  Nota: margens foram SEPARADAS de rentabilidade. No desenho antigo as duas
+  estavam juntas, dando 6 dos 11 indicadores a uma unica categoria - ela
+  dominava o score por peso de contagem, nao por decisao deliberada.
+
+7A.5 CRESCIMENTO (absoluto)   CAGR receita 60% | CAGR lucro 40%
+
+    CAGR (ambos)  >=15% =100 | 10-15% =80 | 5-10% =55 | 0-5% =25 | <0 =0
+
+  Receita pesa mais que lucro: e bem menos manipulavel contabilmente.
+  ARMADILHA DO CAGR DE LUCRO: se o ano-base teve lucro proximo de zero ou
+  negativo, o CAGR explode (+800%) ou fica matematicamente indefinido. Empresa
+  que saiu de R$1mi para R$50mi aparece como crescimento espetacular quando so
+  normalizou.
+  Tratamento: cap em 30% (acima disso, nota 100) e DESCARTAR o valor com flag
+  quando o lucro do ano-base for <= 0.
+
+7A.6 SEGURANCA (absoluto)   divida_patrimonio 100%
+
+    divida/PL   <0.3 =100 | 0.3-0.6 =80 | 0.6-1.0 =60 | 1.0-2.0 =35 |
+                2.0-3.0 =15 | >3.0 ou PL negativo =0
+
+  FINANCEIRAS: nota NEUTRA + flag `nao_aplicavel`, nunca 0. Alavancagem e o
+  modelo de negocio de banco, nao um defeito. Este e o conserto direto do
+  BBAS3 tirando 0.0 em seguranca no ranking atual - ruido puro.
+  FRAGILIDADE CONHECIDA: com margem_bruta fora e alavancagem inaplicavel a
+  metade da carteira, esta categoria fica com um unico indicador. Se a BolsAI
+  expuser liquidez corrente ou divida liquida/EBITDA, pedir e incorporar.
+
+7A.7 VALUATION (RELATIVO - a excecao)
+
+    earnings yield  = 1/pl    maior melhor   peso 50%
+    book-to-market  = 1/pvp   maior melhor   peso 50%
+    processo: winsorizar p5/p95 -> z-score cross-seccional -> mapear 0-100
+
+  POR QUE INVERTER P/L e P/VP em vez de tratar negativo como caso especial:
+  ranquear P/L zero ou negativo coloca essas empresas ABAIXO do menor P/L
+  positivo, quando na verdade sao as mais caras. O inverso (E/P) ordena
+  corretamente do mais barato ao mais caro em todo o dominio, sem nenhum `if`
+  no codigo. Ganho extra: permite comparar duas empresas com prejuizo entre si
+  (yield levemente negativo != yield muito negativo).
+  Isso resolve o P0-4 pela raiz.
+
+  POR QUE winsorizar + z-score em vez de min-max: com min-max o pior sempre
+  tira exatamente 0 e o melhor exatamente 100, independente da distancia real
+  entre eles - artefato, nao informacao (ver VALE3 = 0.0 em crescimento e
+  ITUB4 = 100 em seguranca no ranking atual). Com 10 papeis, um outlier define
+  a escala inteira. Winsorizar + z-score e o padrao de mercado (MSCI winsoriza
+  em +/-3 e padroniza dentro do setor).
+
+  TESTE ABSOLUTO ADICIONAL (especifico do Brasil): se o earnings yield estiver
+  ABAIXO da Selic, a acao paga menos que titulo publico com risco muito maior.
+  Nao vira nota - vira flag `premio_negativo` visivel no dashboard. O z-score
+  relativo esconde isso completamente, porque so diz quem e o menos caro do
+  grupo, ainda que o grupo inteiro esteja caro.
+
+7A.8 DADOS FALTANTES
+
+  Hoje normalizar() faz fillna(valor.median()): um papel sem dado recebe nota
+  media silenciosamente. Substituir por: nao pontuar o indicador ausente,
+  recalcular o peso da categoria sobre os indicadores disponiveis, e expor
+  cobertura ("score calculado com 7 de 11 indicadores").
+
+7A.9 O QUE FICA PARA DEPOIS E POR QUE
+
+  - Momentum 6-12m como fator: exige serie de preco mais longa que a atual.
+  - Sector-neutral de verdade (z-score dentro do setor): com 10-30 papeis nao
+    ha massa (2-3 acoes por setor nao formam distribuicao). O pragmatico agora
+    e marcar setor e apenas NAO pontuar os indicadores inaplicaveis.
+  Implementar qualquer um dos dois hoje seria construir sobre dado
+  insuficiente - o mesmo erro do score_preco atual.
+
+7A.10 REFERENCIAS METODOLOGICAS
+
+  - Piotroski F-Score (2000): checklist de 9 sinais binarios; a forca vem de
+    nao depender de com quem se compara. Explicitamente NAO se aplica a bancos,
+    seguradoras e REITs - estrutura de balanco fundamentalmente diferente.
+  - Magic Formula (Greenblatt): earnings yield + retorno sobre capital.
+    Filtro de F-Score >=7 sobre ela reduz drawdown.
+  - MSCI Diversified Multiple-Factor: z-score por componente, winsorizacao,
+    padronizacao setor-relativa; metricas distintas para Financials.
+  - Licao central dessas tres: ARMADILHA DE VALOR. Acao barata frequentemente
+    esta barata por um bom motivo. Qualidade filtra valor, nao o contrario.
 
 
 --------------------------------------------------------------------------------
@@ -417,8 +573,9 @@ G = grande (mais de um dia de trabalho intercalado).
        (YYYY-MM-DD) nas tabelas cotacoes e
        fundamentos, para permitir ordenacao e filtro
        em SQL.
- P0-4  Corrigir pontuacao de P/L e P/VP negativos        P      DT-06, RF-04
-       (prejuizo nao e "barato").
+ P0-4  Trocar P/L por earnings yield (1/pl) e P/VP por    P      DT-06, 7A.7
+       book-to-market (1/pvp), ambos "maior melhor".
+       Resolve o caso negativo pela raiz, sem `if`.
  P0-5  Restringir coleta ao horario de pregao            P      DT-09
        (dias uteis, 10h-18h). Coleta 24h esta
        poluindo a serie e distorcendo min/max.
@@ -430,11 +587,13 @@ G = grande (mais de um dia de trabalho intercalado).
  ID    Item                                          Esforco  Ref
  P1-1  Extrair logica de score de analise.py para       M      RF-04, RF-06
        src/scoring.py (pipeline separado da pesquisa).
- P1-2  Winsorizacao (p5/p95) ou ranking percentual      M      DT-05, RF-04
-       antes da normalizacao min-max.
- P1-3  Janela explicita no score de preco (ex.: 252     M      DT-04, RF-05
-       observacoes ou 52 semanas) + flag
-       "dados insuficientes" quando abaixo do minimo.
+ P1-2  Winsorizacao (p5/p95) + z-score no valuation.     M      DT-05, 7A.7
+       As demais categorias deixam de usar min-max e
+       passam a faixas absolutas (P1-11).
+ P1-3  Janela explicita (252 pregoes) + flag "dados     M      DT-04, RF-05
+       insuficientes"; RENOMEAR score_preco para
+       score_reversao (o nome atual afirma valuation,
+       a metrica mede queda).
  P1-4  Criar tabela `snapshots_score` e job de          M      RF-09
        consolidacao diaria.
  P1-5  src/carteira.py: valor investido, valor atual,   M      RF-08
@@ -451,6 +610,22 @@ G = grande (mais de um dia de trabalho intercalado).
        Historico com comparacao entre datas.
  P1-10 Aba Ativo (drill-down) e aba Config no           M      RF-10
        dashboard; tabela `config_scoring`.
+ P1-11 Faixas absolutas para rentabilidade, margens,     G      7A.3-7A.6
+       crescimento e seguranca (substitui min-max).
+       Separar margens de rentabilidade; dropar
+       margem_bruta do score; cap de 30% no CAGR de
+       lucro e descarte se ano-base <= 0.
+       PRE-REQUISITO do P1-4: precisa vir antes de
+       comecar a gravar snapshots, senao acumula meses
+       de historico numa escala que sera descartada.
+ P1-12 Flag de setor por ticker; nao pontuar            M      7A.6, Q5
+       divida/PL, ROA e margens para financeiras
+       (nota neutra + `nao_aplicavel`, nunca 0).
+ P1-13 Remover score_geral; parar de imputar mediana    P      7A.8, RF-06
+       em dado faltante e expor cobertura de
+       indicadores.
+ P1-14 Flag `premio_negativo` quando earnings yield     P      7A.7
+       < Selic de referencia.
 
 --- P2 - ROBUSTEZ ----------------------------------------------------------
 
@@ -487,10 +662,15 @@ G = grande (mais de um dia de trabalho intercalado).
  P3-7  Suporte a FIIs.                                  G      Fase 6
 
 Ordem sugerida de execucao:
-  P0-2 -> P0-6 -> P0-1 -> P0-3 -> P0-4 -> P0-5 -> P1-8 -> P1-1 -> P1-2 ->
-  P1-3 -> P1-5 -> P1-6 -> P1-4 -> P1-7 -> P1-9 -> P1-10 -> P2-*
-(P0-2 e P0-6 primeiro porque tornam seguras todas as mudancas seguintes;
- P1-8 antes dos ajustes de score porque muda a base de comparacao.)
+  P0-2 -> P0-6 -> P0-1 -> P0-3 -> P0-4 -> P0-5 -> P1-1 -> P1-11 -> P1-12 ->
+  P1-13 -> P1-2 -> P1-14 -> P1-8 -> P1-3 -> P1-5 -> P1-6 -> P1-4 -> P1-7 ->
+  P1-9 -> P1-10 -> P2-*
+(P0-2 e P0-6 primeiro porque tornam seguras todas as mudancas seguintes.
+ P1-11/12/13 antes do P1-8: com faixas absolutas, ampliar a whitelist deixa de
+ recalibrar o score inteiro - a ordem antiga so fazia sentido enquanto tudo
+ era relativo ao universo.
+ Todo o bloco de score antes do P1-4, para nao gravar snapshots numa escala
+ que sera trocada.)
 
 
 --------------------------------------------------------------------------------
@@ -507,6 +687,15 @@ DT-04 Score de preco usa toda a base coletada como range; com poucos dias de
       historico o numero e enganoso.
 DT-05 Min-max sem tratamento de outlier distorce todo o universo.
 DT-06 P/L e P/VP negativos sao pontuados como "baratos" indevidamente.
+      Resolucao adotada: inverter as metricas (E/P e B/P) - ver 7A.7.
+DT-13 Score integralmente relativo ao universo impede comparacao historica:
+      o mesmo ticker muda de nota quando a whitelist muda, sem que a empresa
+      tenha mudado. Conflita diretamente com o objetivo O1 (snapshots).
+      Resolucao adotada: faixas absolutas fora de valuation - ver 7A.1.
+DT-14 `normalizar()` faz fillna(median): dado faltante vira nota media em
+      silencio, sem o usuario saber - ver 7A.8.
+DT-15 score_preco tem nome enganoso: mede queda, nao barateamento. Uma acao
+      pode cair 40% e ficar mais cara se o lucro caiu 60% - ver RF-05.
 DT-07 Variaveis globais `pausado` e `encerrar` compartilhadas entre threads sem
       sincronizacao; trocar por threading.Event.
 DT-08 `buscar_dados_acao` e `buscar_fundamentos` sem timeout, retry ou
@@ -559,8 +748,15 @@ RISCOS
       componente, ou permanece exploratoria no notebook?
   Q4. Proventos e dividend yield entram no score de rentabilidade ou como
       categoria propria?
-  Q5. Comparacao de indicadores deve ser contra todo o universo ou contra o
-      setor do ativo? (P/L de banco vs P/L de mineradora nao sao comparaveis)
+  Q8. As faixas absolutas de 7A.3-7A.6 precisam de revisao periodica conforme
+      Selic e inflacao. Com que frequencia, e disparada por que gatilho?
+  Q9. Vale adicionar momentum 6-12m como fator, dado que o score_reversao
+      aposta na direcao oposta? (depende de serie de preco mais longa)
+  Q5. [PARCIALMENTE RESOLVIDA - 02/09] Comparacao contra universo ou contra
+      setor? Decisao: com 10-30 papeis nao ha massa para z-score setorial.
+      Adotado o pragmatico - marcar setor e NAO pontuar indicadores
+      inaplicaveis a financeiras (P1-12). Sector-neutral pleno fica para
+      quando o universo comportar.
   Q6. Streamlit atende, ou vale um front separado (FastAPI + React) mais adiante?
   Q7. Onde registrar taxas e IR nas vendas para o resultado realizado ficar fiel?
 
