@@ -13,6 +13,7 @@ Especificação completa: `PRD_analise_acoes.txt` (v1.2)
 Metodologia do score: **seção 7A do PRD** — leia antes de mexer em scoring
 Onde parei / próxima tarefa: `ESTADO.md`
 Por que as coisas são como são: `DECISOES.md`
+O que cada comando faz e como rodar: `COMANDOS.md`
 
 ## Quem sou eu
 
@@ -36,8 +37,6 @@ trade-off antes de decidir por mim.
       backfill_transacoes.py  script de uso único, já executado
       migrar_datas_iso.py     script de uso único, já executado
       test_bolsai.py          script solto de teste manual da API BolsAI
-      test_valuation.py       testes do P0-4 (rodar: python test_valuation.py)
-      test_pregao.py          testes do P0-5 (rodar: python test_pregao.py)
     data/
       acoes.db                banco SQLite
       backups/                cópias automáticas com timestamp
@@ -148,6 +147,7 @@ o que já foi feito antes de assumir qualquer coisa.
 Não são bugs a corrigir de passagem — são itens do backlog. Cite se
 atrapalharem a tarefa atual, mas não conserte fora de hora.
 
+- Coleta roda 24h, inclusive fora do pregão, poluindo a série (P0-5).
 - `normalizar()` faz `fillna(median)`: dado faltante vira nota média em
   silêncio, sem aviso (P1-13).
 - Min-max sem tratamento de outlier nas categorias ainda não migradas; o pior
