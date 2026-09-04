@@ -1,6 +1,6 @@
 # Estado do projeto
 
-Atualizado em: 02/09/2026
+Atualizado em: 04/09/2026
 Referência de prioridade: seção 10 do PRD v1.2
 
 Atualize este arquivo ao fim de cada tarefa e commite junto. Ele é o que te
@@ -33,6 +33,10 @@ orienta quando você voltar ao projeto depois de um tempo parado.
 - [x] **P0-6** backup automático do `.db` (throttle diário) — em `paths.py`
 - [x] **P0-1** tabela `transacoes` + backfill das posições
 - [x] **P0-3** coluna `data_hora_iso` nas três tabelas + script de migração
+- [x] **P0-4** valuation via earnings yield e book-to-market — commit a253fbe
+- [x] **P0-5** coleta automática restrita ao pregão (dias úteis, 10h–18h,
+      horário de Brasília) — `esta_no_horario_de_pregao()` em `main.py`;
+      feriados nacionais ficaram fora de propósito, ver §Restrições
 - [x] `config.py` com caminho explícito do `.env` + falha imediata se faltar
       token
 - [x] Limpeza da posição de teste TESTE3
@@ -42,7 +46,8 @@ orienta quando você voltar ao projeto depois de um tempo parado.
 
 ## Em andamento
 
-- [ ] nada — próxima é **P0-4**
+- [ ] nada — o P0 está fechado; próxima é **P1-1** (extrair score para
+      `src/scoring.py`)
 
 ---
 
@@ -53,14 +58,6 @@ saiu da frente**: com faixas absolutas, ampliar a lista deixa de recalibrar o
 score inteiro, então não precisa mais vir antes dos ajustes de fórmula.
 Todo o bloco de score vem **antes** do P1-4, para não gravar snapshots numa
 escala que será trocada.
-
-### Fecha o P0
-- [ ] **P0-4** trocar P/L por earnings yield (`1/pl`) e P/VP por
-      book-to-market (`1/pvp`), ambos "maior melhor"
-      *Aceite:* ação com prejuízo aparece no fim do ranking de valuation, e
-      duas empresas com prejuízo diferente não empatam.
-- [ ] **P0-5** coleta restrita ao pregão (dias úteis, 10h–18h)
-      *Aceite:* rodar o loop às 22h não insere linha em `cotacoes`.
 
 ### Bloco de score (o miolo da revisão)
 - [ ] **P1-1** extrair lógica de score de `analise.py` para `src/scoring.py`
@@ -141,3 +138,8 @@ Depois: P1-9, P1-10 e a faixa P2 (robustez).
   `copy data\acoes.db data\acoes_backup_AAAAMMDD.db`
 - Consultar o banco sem SQL na mão: pedir um script curto que imprime o
   resultado, em vez de digitar SQL no terminal.
+- **Feriados**: a janela de pregão olha só dia da semana e hora. Feriado
+  nacional que cai em dia útil (Natal numa terça, Carnaval, 7 de setembro)
+  ainda dispara coleta, e o preço repetido do último fechamento entra na
+  série. São ~9 dias por ano. Fechar isso pede calendário da B3 e é tarefa
+  futura, não bug do P0-5.
