@@ -13,6 +13,7 @@ import sqlite3
 import pandas as pd
 
 import scoring
+import validacao
 from paths import CAMINHO_BANCO
 
 
@@ -77,12 +78,21 @@ def carregar_precos_para_score():
     return df
 
 
+def fundamentos_validados():
+    """(fundamentos, relatorio) com os valores impossiveis virados em ausentes.
+
+    A validacao fica entre carregar e pontuar, nao dentro do carregador: quem
+    quiser o dado cru da BolsAI, para conferir o que foi recusado, usa
+    carregar_fundamentos_mais_recentes() direto.
+    """
+    df = carregar_fundamentos_mais_recentes()
+    return validacao.validar_dataframe(df)
+
+
 def ranking_atual():
-    """Carrega o que o score precisa e devolve o ranking completo."""
-    return scoring.calcular_score_geral(
-        carregar_fundamentos_mais_recentes(),
-        carregar_precos_para_score(),
-    )
+    """Carrega, valida e devolve o ranking completo."""
+    fundamentos, _ = fundamentos_validados()
+    return scoring.calcular_score_geral(fundamentos, carregar_precos_para_score())
 
 
 if __name__ == "__main__":
@@ -94,8 +104,12 @@ if __name__ == "__main__":
     print("Cotacoes:", cotacoes.shape)
     print("Posicoes:", posicoes.shape)
 
+    print()
+    validados, relatorio = fundamentos_validados()
+    validacao.imprimir_relatorio(relatorio)
+
     print("\nRanking geral (fundamentalista + preco):\n")
-    ranking = ranking_atual()
+    ranking = scoring.calcular_score_geral(validados, carregar_precos_para_score())
 
     # scores em 1 casa; yields em 4, senao 0,0823 apareceria como 0,1
     ranking_exibicao = ranking.round(1)
