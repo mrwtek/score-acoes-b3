@@ -17,6 +17,9 @@ import pandas as pd
 from analise import ranking_atual
 from scoring import (
     CATEGORIAS_FUNDAMENTALISTAS,
+    CATEGORIAS_RELATIVAS,
+    MAIOR_MELHOR,
+    PESOS_INDICADOR,
     LIMITE_BOOK_TO_MARKET,
     LIMITE_YIELD,
     adicionar_metricas_valuation,
@@ -28,8 +31,8 @@ def score_valuation(df):
     """Reproduz a categoria valuation usando as funcoes reais do scoring.py."""
     derivado = adicionar_metricas_valuation(df)
     scores = pd.DataFrame(index=derivado.index)
-    for indicador, maior_melhor in CATEGORIAS_FUNDAMENTALISTAS["valuation"].items():
-        scores[indicador] = normalizar(derivado[indicador], maior_melhor)
+    for indicador in PESOS_INDICADOR["valuation"]:
+        scores[indicador] = normalizar(derivado[indicador], MAIOR_MELHOR[indicador])
     return scores.mean(axis=1)
 
 
@@ -160,18 +163,21 @@ def teste_08_teto_e_monotono():
 # 9. Contrato: o que o P0-4 mexeu e o que ele nao podia mexer
 # --------------------------------------------------------------------------
 def teste_09_contrato_da_categoria():
-    assert CATEGORIAS_FUNDAMENTALISTAS["valuation"] == {
-        "earnings_yield": True,
-        "book_to_market": True,
-    }, "a categoria valuation deveria usar as duas metricas invertidas, maior e melhor"
+    # valuation segue com as duas metricas invertidas e e a UNICA relativa
+    assert PESOS_INDICADOR["valuation"] == {"earnings_yield": 0.50, "book_to_market": 0.50}
+    assert CATEGORIAS_RELATIVAS == ("valuation",), (
+        "valuation e a excecao do P1-11: 'caro' so existe em comparacao"
+    )
+    assert MAIOR_MELHOR == {"earnings_yield": True, "book_to_market": True}
 
-    # as outras categorias seguem intactas (serao redesenhadas no P1-11)
-    assert CATEGORIAS_FUNDAMENTALISTAS["seguranca"] == {"divida_patrimonio": False}
-    assert CATEGORIAS_FUNDAMENTALISTAS["crescimento"] == {
-        "cagr_receita_5a": True,
-        "cagr_lucro_5a": True,
-    }
-    assert len(CATEGORIAS_FUNDAMENTALISTAS["rentabilidade"]) == 6
+    # P1-11: margens virou categoria propria e margem_bruta saiu do score
+    assert "margens" in CATEGORIAS_FUNDAMENTALISTAS
+    assert set(PESOS_INDICADOR["rentabilidade"]) == {"roic", "roe", "roa"}, (
+        "as margens tinham que ter saido de rentabilidade"
+    )
+    assert "margem_bruta" not in {
+        indicador for pesos in PESOS_INDICADOR.values() for indicador in pesos
+    }, "margem_bruta continua no banco, mas nao pontua mais (7A.4)"
 
     # pl e pvp continuam existindo no dataframe, so nao entram no score
     derivado = adicionar_metricas_valuation(montar({"A": (10.0, 2.0)}))

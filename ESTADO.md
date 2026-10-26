@@ -69,6 +69,13 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       indicador sai do cálculo com o peso redistribuído, em vez de virar 0.
       Divergi da 7A.6 em um ponto: inaplicável é tratado como ausente, não com
       nota neutra. Justificado no DECISOES.md e fácil de reverter.
+- [x] **P1-11** faixas absolutas em `src/faixas.py`, **interpoladas** entre as
+      âncoras. Margens viraram categoria própria, `margem_bruta` saiu do score,
+      cap de 30% no CAGR de lucro. Aceite cumprido: o teste entra seis tickers
+      novos e a nota da PETR4 não se move.
+      **A coluna segurança voltou a ser utilizável** — era 0,0 / 100,0 puro
+      artefato, agora FIQE3 67,0, ISAE4 70,0, PETR4 72,0, VALE3 86,7.
+      Peso das 5 categorias: 20% cada, número meu e não do PRD (DECISOES.md).
 - [x] **P1-3** `score_reversao` (antigo `score_preco`) agora lê
       `cotacoes_historicas` pelo fechamento ajustado, janela de 252 pregões,
       mínimo de 60. Aceite cumprido: abaixo de 60 devolve 50 com flag.
@@ -109,8 +116,7 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] nada — próxima é **P1-11** (faixas absolutas). Virou prioridade real:
-      ver o aviso sobre a coluna segurança logo abaixo
+- [ ] nada — próximas são **AFINAR-FAIXAS** e **P1-2**
 
 ---
 
@@ -123,26 +129,15 @@ Todo o bloco de score vem **antes** do P1-4, para não gravar snapshots numa
 escala que será trocada.
 
 ### Bloco de score (o miolo da revisão)
-- [ ] **P1-11** faixas absolutas — **agora é urgente, não só desejável.** Com
-      as financeiras fora de dívida/PL, segurança ficou com 1 indicador e 5
-      papéis, e o min-max virou artefato puro (FIQE3 em 0,0 e WEGE3 em 100,0).
-      Até o P1-11 entrar, **não use a coluna segurança para decidir nada.**
-      Ver DECISOES.md.
-      *Escopo (PRD §7A.3 a §7A.6):* faixas absolutas no lugar do min-max,
-      separar margens de rentabilidade, dropar `margem_bruta` do score, cap de
-      30% no CAGR de lucro.
-      *Aceite:* mudar a whitelist não altera a nota de um ticker que não mudou.
-      *Dois ajustes decididos na revisão de 26/10, antes de implementar:*
-      1. **Interpolar** entre as âncoras em vez de degraus. ROE 15%=80 e
-         ROE 20%=100 continuam valendo, mas ROE 17,5% vira 90 em vez de 80.
-         Com degraus, 2,4 p.p. de CAGR valem 10 pontos de score e a mesma
-         variação no meio da faixa vale 0 — ruim justamente para o O1, que é
-         acompanhar a empresa no tempo.
-      2. A regra "descartar CAGR de lucro se o ano-base for ≤ 0" **não é
-         implementável**: a BolsAI devolve o CAGR pronto, sem o lucro do
-         ano-base. Dá para aplicar o cap de 30%, não o descarte. A PETR4 com
-         CAGR de 77,68% vai ser capada e receber nota máxima para um número
-         que é quase certamente artefato de base deprimida.
+- [ ] **AFINAR-FAIXAS** as âncoras de crescimento estão frouxas. **6 de 9
+      tickers passam do teto de 15%** no CAGR de receita e 5 de 9 no de lucro,
+      então a categoria vira 100 para quase todo mundo e para de discriminar.
+      A causa é que as faixas são nominais: com inflação de 4,5% (7A.2), 15%
+      nominal é ~10% real e não devia ser teto. No total, 22% das notas de
+      categoria estão em 100,0 — a maior parte em crescimento e margens.
+      *Sugestão:* subir o teto do CAGR para 20–25%, ou descontar a inflação.
+      Decisão sua: mexer nas âncoras é mexer na régua, e isso quebra a
+      comparabilidade com os snapshots já gravados.
 - [ ] **P1-2** winsorização (p5/p95) + z-score no valuation
       *Aceite:* o pior colocado deixa de tirar exatamente 0.0.
 - [ ] **P1-14** flag `premio_negativo` quando earnings yield < Selic

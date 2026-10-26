@@ -9,6 +9,55 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 26/10/2026 — Faixas absolutas interpoladas, não em degraus
+
+**Decisão (P1-11):** as faixas da 7A viram **âncoras** e o meio é interpolado
+em linha reta. As notas nas âncoras são exatamente as do PRD; o que muda é que
+entre elas a nota varia de forma contínua. ROE 17,5 vira 90 em vez de 80.
+
+**Por quê:** implementada ao pé da letra, a tabela cria penhascos. ROE 14,9
+vale 55 e ROE 15,0 vale 80 — 25 pontos por 0,1 ponto de ROE, enquanto a mesma
+variação no meio da faixa vale zero. Medido na carteira real, a ITUB4 estava a
+2,38 p.p. de uma borda que valia 10 pontos de score.
+
+Isso é ruim justamente para o O1. Acompanhando a empresa no tempo você não
+conseguiria separar "a empresa mudou" de "a empresa cruzou uma linha
+arbitrária" — e é para responder essa pergunta que os snapshots existem.
+
+**O que isso não muda:** continua absoluto. A nota segue dependendo só do
+valor do indicador, nunca de quem está na whitelist. O teste de aceite entra
+seis tickers novos, incluindo extremos nos dois sentidos, e confere que a nota
+da PETR4 não se move um décimo.
+
+**Único ponto em que fui além da 7A:** onde o PRD diz "<X = 0" sem dizer onde
+a reta encosta no zero, escolhi a âncora de baixo para a curva ficar contínua
+em vez de criar um degrau novo. Vale para roe, roa, margem_liquida e os dois
+CAGR, e está comentado no `faixas.py`.
+
+---
+
+## 26/10/2026 — Peso das categorias: 20% cada, e isso é provisório
+
+**Decisão:** com margens virando categoria própria são cinco, e o PRD não diz
+quanto cada uma vale nesse desenho. Adotei 20% para todas.
+
+**Por quê:** é o default honesto quando não há base para preferir. Mas tem um
+efeito que precisa ficar registrado: antes margens estava **dentro** de
+rentabilidade, e as duas juntas valiam 25%. Com 20% cada, qualidade
+(rentabilidade + margens) passa a valer **40%** do score — o oposto do motivo
+da separação, que era tirar a dominância dessa categoria.
+
+Agora a dominância é por decisão explícita e não por contagem de indicadores,
+o que já é um ganho. Mas o número em si é meu, não do PRD.
+
+**Medido:** a sensibilidade é menor do que eu esperava. Em quatro cenários de
+peso (iguais, qualidade 25%, valor pesado, qualidade pesada), PETR4 fica em 1º
+nos quatro e VALE3 em 10º nos quatro. O que muda é o meio da tabela — ISAE4 vai
+de 6º para 2º no cenário "valor pesado". Então a escolha importa para decidir
+entre papéis parecidos, não para o topo e o fundo.
+
+---
+
 ## 26/10/2026 — Score de reversão: janela de 252, mínimo de 60, fechamento ajustado
 
 **Decisão (P1-3):** o score de reversão passa a ler `cotacoes_historicas` em

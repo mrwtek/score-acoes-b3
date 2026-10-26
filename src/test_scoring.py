@@ -16,6 +16,7 @@ from scoring import (
     CATEGORIAS_FUNDAMENTALISTAS,
     JANELA_REVERSAO,
     MINIMO_OBSERVACOES,
+    PESOS_INDICADOR,
     calcular_score_reversao,
     PESOS_CATEGORIA,
     calcular_ranking,
@@ -97,12 +98,13 @@ def teste_05_cobertura_conta_indicadores_usados_e_aplicaveis():
     df = montar(PETR4={}, VALE3={"roe": np.nan, "roa": np.nan})
     r = calcular_score_fundamentalista(df)
 
-    assert r.loc["PETR4", "indicadores_aplicaveis"] == 11, (
-        "nao financeira: 2 de valuation + 6 de rentabilidade + 2 de crescimento + 1 de seguranca"
+    assert r.loc["PETR4", "indicadores_aplicaveis"] == 10, (
+        "nao financeira: 2 de valuation + 3 de rentabilidade + 2 de margens + "
+        "2 de crescimento + 1 de seguranca. margem_bruta saiu no P1-11"
     )
-    assert r.loc["PETR4", "indicadores_usados"] == 11
-    assert r.loc["VALE3", "indicadores_usados"] == 9, "dois indicadores faltando"
-    assert r.loc["VALE3", "indicadores_aplicaveis"] == 11, (
+    assert r.loc["PETR4", "indicadores_usados"] == 10
+    assert r.loc["VALE3", "indicadores_usados"] == 8, "dois indicadores faltando"
+    assert r.loc["VALE3", "indicadores_aplicaveis"] == 10, (
         "faltar dado nao reduz o que se APLICA -- e isso que deixa o buraco visivel"
     )
 
@@ -114,7 +116,7 @@ def teste_06_financeira_tem_menos_indicadores_aplicaveis():
     assert r.loc["BBAS3", "indicadores_aplicaveis"] == 6, (
         "banco pontua valuation (2), roe, roic e os dois CAGR"
     )
-    assert r.loc["PETR4", "indicadores_aplicaveis"] == 11
+    assert r.loc["PETR4", "indicadores_aplicaveis"] == 10
 
 
 # --------------------------------------------------------------------------
@@ -324,6 +326,112 @@ def teste_22_serie_vazia_nao_quebra():
 def teste_23_minimo_e_janela_sao_os_do_prd():
     assert JANELA_REVERSAO == 252, "252 pregoes = um ano de bolsa (PRD RF-05)"
     assert MINIMO_OBSERVACOES == 60
+
+
+# --------------------------------------------------------------------------
+# 24. O ACEITE DO P1-11: a nota nao depende de quem esta na whitelist
+# --------------------------------------------------------------------------
+def teste_24_mudar_a_whitelist_nao_muda_a_nota_de_quem_nao_mudou():
+    pequeno = calcular_score_fundamentalista(montar(PETR4={}, VALE3={}))
+
+    # entram seis papeis, inclusive extremos nos dois sentidos
+    grande = calcular_score_fundamentalista(montar(
+        PETR4={}, VALE3={},
+        WEGE3={"roe": 40.0, "roic": 38.0, "margem_liquida": 30.0},
+        FIQE3={"roe": 2.0, "roic": 1.0, "margem_liquida": -20.0},
+        ISAE4={"cagr_receita_5a": 50.0}, BBSE3={"cagr_receita_5a": -30.0},
+    ))
+
+    for categoria in ("rentabilidade", "margens", "crescimento", "seguranca"):
+        antes = pequeno.loc["PETR4", categoria]
+        depois = grande.loc["PETR4", categoria]
+        assert abs(antes - depois) < 1e-9, (
+            f"a nota de {categoria} da PETR4 mudou de {antes:.2f} para "
+            f"{depois:.2f} so porque entraram outros tickers. E exatamente o "
+            f"que o P1-11 veio eliminar -- sem isso os snapshots do O1 nao "
+            f"sao comparaveis no tempo"
+        )
+
+
+def teste_25_valuation_continua_relativo_de_proposito():
+    pequeno = calcular_score_fundamentalista(montar(PETR4={"pl": 10.0}, VALE3={"pl": 12.0}))
+    grande = calcular_score_fundamentalista(montar(
+        PETR4={"pl": 10.0}, VALE3={"pl": 12.0}, WEGE3={"pl": 2.0}, FIQE3={"pl": 80.0},
+    ))
+
+    assert pequeno.loc["PETR4", "valuation"] != grande.loc["PETR4", "valuation"], (
+        "valuation e a excecao e TEM que mudar com o universo: 'caro' so "
+        "existe em comparacao"
+    )
+
+
+# --------------------------------------------------------------------------
+# 26. Faixa absoluta: a nota sai do valor, pela tabela do faixas.py
+# --------------------------------------------------------------------------
+def teste_26_nota_da_categoria_e_media_ponderada_das_ancoras():
+    # ROIC 40%, ROE 35%, ROA 25%
+    df = montar(PETR4={"roic": 20.0, "roe": 20.0, "roa": 12.0})
+    r = calcular_score_fundamentalista(df)
+
+    esperado = 100.0 * 0.40 + 100.0 * 0.35 + 100.0 * 0.25
+    assert abs(r.loc["PETR4", "rentabilidade"] - esperado) < 1e-9
+
+
+def teste_27_peso_do_indicador_ausente_e_redistribuido():
+    # sem ROA: a nota tem que ser a ponderada de ROIC e ROE so entre eles
+    df = montar(PETR4={"roic": 20.0, "roe": 10.0, "roa": np.nan})
+    r = calcular_score_fundamentalista(df)
+
+    esperado = (100.0 * 0.40 + 55.0 * 0.35) / (0.40 + 0.35)
+    assert abs(r.loc["PETR4", "rentabilidade"] - esperado) < 1e-9, (
+        "faltar ROA nao pode puxar a nota para baixo so por falta de dado"
+    )
+
+
+def teste_28_roic_pesa_mais_que_roe_que_pesa_mais_que_roa():
+    assert PESOS_INDICADOR["rentabilidade"]["roic"] == 0.40
+    assert PESOS_INDICADOR["rentabilidade"]["roe"] == 0.35
+    assert PESOS_INDICADOR["rentabilidade"]["roa"] == 0.25
+    assert PESOS_INDICADOR["crescimento"]["cagr_receita_5a"] == 0.60, (
+        "receita pesa mais que lucro: e menos manipulavel contabilmente"
+    )
+
+
+# --------------------------------------------------------------------------
+# 29. Margens viraram categoria propria e margem_bruta saiu
+# --------------------------------------------------------------------------
+def teste_29_margens_e_categoria_separada():
+    r = calcular_score_fundamentalista(montar(PETR4={"margem_liquida": 20.0,
+                                                    "margem_ebitda": 30.0}))
+    assert "margens" in r.columns
+    assert abs(r.loc["PETR4", "margens"] - 100.0) < 1e-9
+
+
+def teste_30_margem_bruta_nao_move_mais_nenhuma_nota():
+    alta = calcular_score_fundamentalista(montar(PETR4={"margem_bruta": 90.0}))
+    baixa = calcular_score_fundamentalista(montar(PETR4={"margem_bruta": 1.0}))
+
+    assert (alta.loc["PETR4", "score_fundamentalista"]
+            == baixa.loc["PETR4", "score_fundamentalista"]), (
+        "margem_bruta ainda pontua. Ela e a mais dependente de setor do "
+        "conjunto e so adiciona ruido (7A.4)"
+    )
+
+
+def teste_31_banco_nao_tem_categoria_margens():
+    r = calcular_score_fundamentalista(montar(BBAS3={}, PETR4={}))
+    assert pd.isna(r.loc["BBAS3", "margens"]), "banco nao tem EBITDA no sentido usual"
+    assert not pd.isna(r.loc["PETR4", "margens"])
+
+
+def teste_32_cap_do_cagr_de_lucro_vale_no_score():
+    capado = calcular_score_fundamentalista(montar(PETR4={"cagr_lucro_5a": 77.68}))
+    no_teto = calcular_score_fundamentalista(montar(PETR4={"cagr_lucro_5a": 30.0}))
+
+    assert (capado.loc["PETR4", "crescimento"]
+            == no_teto.loc["PETR4", "crescimento"]), (
+        "sem o teto, ano-base deprimido vira crescimento espetacular"
+    )
 
 
 if __name__ == "__main__":

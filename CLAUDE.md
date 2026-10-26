@@ -33,6 +33,8 @@ trade-off antes de decidir por mim.
       banco.py                SQLite: criar_tabelas, salvar/registrar
       main.py                 loop de coleta em thread + CLI
       gerenciar_posicoes.py   CLI de carteira (buy/sell/show)
+      faixas.py               âncoras absolutas por indicador + interpolação.
+                              Não depende do universo (P1-11)
       scoring.py              as fórmulas do score. NÃO lê o banco: recebe
                               DataFrames e devolve DataFrames
       validacao.py            recusa indicador impossível (vira ausente, nunca
@@ -170,6 +172,11 @@ universo. Isso é o que torna os snapshots comparáveis ao longo do tempo.
     seguranca       dívida/patrimônio 100%                absoluto
     valuation       E/P 50% | B/P 50%                     relativo
 
+Implementado no P1-11. As faixas da 7A são **âncoras interpoladas**, não
+degraus: as notas nas âncoras são as do PRD, mas entre elas a nota varia em
+linha reta. Sem isso, ROE 14,9 valeria 55 e ROE 15,0 valeria 80.
+Peso das cinco categorias: 20% cada — número meu, não do PRD, ver DECISOES.md.
+
 - Valuation usa **earnings yield (1/pl)** e **book-to-market (1/pvp)**, ambos
   "maior é melhor" — nunca P/L e P/VP diretos, que pontuam prejuízo como
   "barato".
@@ -195,11 +202,15 @@ universo. Isso é o que torna os snapshots comparáveis ao longo do tempo.
   absoluta transforma número absurdo em nota confiante, então o filtro vem
   antes.
 - Escala sempre 0–100. Faixas ancoradas ao custo de capital brasileiro
-  (Selic/inflação em `config_scoring`), não copiadas de tabela americana.
+  (`SELIC_REFERENCIA` e `INFLACAO_REFERENCIA` em `faixas.py`; a tabela
+  `config_scoring` do PRD ainda não existe), não copiadas de tabela americana.
+- **Aberto:** as âncoras de crescimento são nominais e estão frouxas — 6 de 9
+  tickers passam do teto de 15% no CAGR de receita. Num país com inflação de
+  4,5%, 15% nominal não devia ser o teto. Ver ESTADO.md.
 
-O estado atual do código ainda **não** reflete tudo isso — a migração é o bloco
-P1-1 → P1-11 → P1-12 → P1-13 → P1-2 → P1-14 do backlog. Confira no `ESTADO.md`
-o que já foi feito antes de assumir qualquer coisa.
+Desse bloco falta só o **P1-2** (winsorização + z-score no valuation) e o
+**P1-14** (flag `premio_negativo`). Confira no `ESTADO.md` antes de assumir
+qualquer coisa.
 
 ## Regras de trabalho
 

@@ -21,20 +21,58 @@ O P1-1 so moveu o codigo de lugar, sem mudar uma conta.
 import numpy as np
 import pandas as pd
 
+import faixas
 import setores
 
-CATEGORIAS_FUNDAMENTALISTAS = {
-    "valuation": {"earnings_yield": True, "book_to_market": True},
-    "rentabilidade": {"roe": True, "roa": True, "roic": True, "margem_liquida": True, "margem_bruta": True, "margem_ebitda": True},
-    "crescimento": {"cagr_receita_5a": True, "cagr_lucro_5a": True},
-    "seguranca": {"divida_patrimonio": False},
+# Peso de cada indicador dentro da sua categoria (PRD 7A.3 a 7A.7).
+#
+# ROIC pesa mais que ROE porque mede retorno sobre o capital total empregado,
+# entao nao e inflado por alavancagem. Receita pesa mais que lucro porque e
+# bem menos manipulavel contabilmente.
+#
+# margem_bruta NAO esta aqui: saiu do score no P1-11 (7A.4). A coluna continua
+# no banco, sem custo. E o indicador mais dependente de setor do conjunto --
+# 25% e otimo para varejo e pessimo para software -- e sem ajuste setorial nao
+# informa nada comparavel entre VALE3 e ITUB4.
+PESOS_INDICADOR = {
+    "valuation": {"earnings_yield": 0.50, "book_to_market": 0.50},
+    "rentabilidade": {"roic": 0.40, "roe": 0.35, "roa": 0.25},
+    "margens": {"margem_liquida": 0.60, "margem_ebitda": 0.40},
+    "crescimento": {"cagr_receita_5a": 0.60, "cagr_lucro_5a": 0.40},
+    "seguranca": {"divida_patrimonio": 1.00},
 }
 
+# Categorias com FAIXA ABSOLUTA: a nota sai do valor do indicador, pelas
+# ancoras do faixas.py, e nao depende de quem esta na whitelist.
+CATEGORIAS_ABSOLUTAS = ("rentabilidade", "margens", "crescimento", "seguranca")
+
+# Valuation e a excecao, e continua RELATIVA ao universo: "caro" so existe em
+# comparacao. Hoje por min-max; o P1-2 troca por winsorizacao + z-score.
+CATEGORIAS_RELATIVAS = ("valuation",)
+
+# Direcao das metricas relativas. As absolutas nao precisam disso: a direcao
+# ja esta na ordem das notas das ancoras.
+MAIOR_MELHOR = {"earnings_yield": True, "book_to_market": True}
+
+CATEGORIAS_FUNDAMENTALISTAS = tuple(PESOS_INDICADOR)
+
+# PESO DE CADA CATEGORIA -- DECISAO EM ABERTO.
+#
+# Com margens virando categoria propria sao 5, e o PRD nao diz quanto cada uma
+# vale nesse desenho. 20% para todas e o default honesto quando nao ha base
+# para preferir, nao uma conclusao.
+#
+# O que esta em jogo: antes margens estava DENTRO de rentabilidade, e as duas
+# juntas valiam 25%. Com 20% cada, qualidade (rentabilidade + margens) passa a
+# valer 40% do score. Isso e o oposto do motivo da separacao, que era tirar a
+# dominancia da categoria -- so que agora por decisao explicita e nao por
+# contagem de indicadores. Vale revisar com o usuario.
 PESOS_CATEGORIA = {
-    "valuation": 0.25,
-    "rentabilidade": 0.25,
-    "crescimento": 0.25,
-    "seguranca": 0.25,
+    "valuation": 0.20,
+    "rentabilidade": 0.20,
+    "margens": 0.20,
+    "crescimento": 0.20,
+    "seguranca": 0.20,
 }
 
 # Tetos das metricas derivadas. Servem para um ticker com P/L (ou P/VP) proximo
@@ -134,7 +172,7 @@ def _mascarar_nao_aplicaveis(df):
 def _contar_aplicaveis(df):
     """Quantos indicadores do score se aplicam a cada ticker."""
     contagem = pd.Series(0, index=df.index, dtype=int)
-    for indicadores in CATEGORIAS_FUNDAMENTALISTAS.values():
+    for indicadores in PESOS_INDICADOR.values():
         for indicador in indicadores:
             if indicador not in df.columns:
                 continue
@@ -144,8 +182,32 @@ def _contar_aplicaveis(df):
     return contagem
 
 
+def _media_ponderada(df, pesos_por_coluna):
+    """Media ponderada linha a linha, ignorando coluna ausente.
+
+    O peso da coluna que falta e redistribuido entre as presentes. Sem isso,
+    faltar o ROA puxaria a nota de rentabilidade para baixo so por falta de
+    dado -- o mesmo erro que o fillna(median) cometia pelo lado oposto.
+    """
+    colunas = [coluna for coluna in pesos_por_coluna if coluna in df.columns]
+    if not colunas:
+        return pd.Series(np.nan, index=df.index)
+
+    notas = df[colunas]
+    pesos = pd.DataFrame(
+        {coluna: pesos_por_coluna[coluna] for coluna in colunas}, index=df.index
+    ).where(notas.notna())
+
+    soma = pesos.sum(axis=1)
+    return (notas * pesos).sum(axis=1) / soma.replace(0, np.nan)
+
+
 def calcular_score_fundamentalista(fundamentos):
     """`fundamentos`: um registro por ticker, indexado por ticker.
+
+    Quatro categorias usam FAIXA ABSOLUTA (faixas.py): a nota sai do valor do
+    indicador e nao muda quando a whitelist muda. So valuation e relativa ao
+    universo, porque "caro" so existe em comparacao.
 
     Devolve as notas por categoria, o score_fundamentalista e a cobertura
     (`indicadores_usados` de `indicadores_aplicaveis`). Categoria sem nenhum
@@ -160,18 +222,26 @@ def calcular_score_fundamentalista(fundamentos):
     scores_categoria = pd.DataFrame(index=df.index)
     colunas_de_indicador = []
 
-    for categoria, indicadores in CATEGORIAS_FUNDAMENTALISTAS.items():
-        colunas_score = []
-        for indicador, maior_melhor in indicadores.items():
+    for categoria in CATEGORIAS_FUNDAMENTALISTAS:
+        pesos = PESOS_INDICADOR[categoria]
+        pesos_por_coluna = {}
+
+        for indicador, peso in pesos.items():
             if indicador not in df.columns:
                 continue
             col_score = f"score_{indicador}"
-            df[col_score] = normalizar(df[indicador], maior_melhor)
-            colunas_score.append(col_score)
 
-        colunas_de_indicador.extend(colunas_score)
-        # mean(axis=1) ignora ausente; categoria sem nada vira ausente
-        scores_categoria[categoria] = df[colunas_score].mean(axis=1) if colunas_score else np.nan
+            if categoria in CATEGORIAS_ABSOLUTAS:
+                df[col_score] = df[indicador].map(
+                    lambda valor, ind=indicador: faixas.nota(ind, valor)
+                )
+            else:
+                df[col_score] = normalizar(df[indicador], MAIOR_MELHOR[indicador])
+
+            pesos_por_coluna[col_score] = peso
+
+        colunas_de_indicador.extend(pesos_por_coluna)
+        scores_categoria[categoria] = _media_ponderada(df, pesos_por_coluna)
 
     categorias = list(CATEGORIAS_FUNDAMENTALISTAS)
     notas = scores_categoria[categorias]
