@@ -44,8 +44,17 @@ orienta quando você voltar ao projeto depois de um tempo parado.
 - [x] **P3-4** backfill de preços históricos — tabela `cotacoes_historicas`,
       `buscar_historico()` em `coletor.py` e `backfill_historico.py`, com
       `test_historico.py` (15 testes). Primeira carga: 819 linhas, 63 pregões
-      por ticker, 28/07 a 26/10/2026. **Puxado fora da ordem do backlog**, a
+      por ticker, 28/07 a 23/10/2026. **Puxado fora da ordem do backlog**, a
       pedido, antes do P1-1.
+- [x] **Benchmarks** (tarefa não prevista no PRD) — tabela `indices` com IBOV
+      (brapi) e Selic/CDI (BCB, API aberta), `indices.py`,
+      `backfill_indices.py` e `test_indices.py` (18 testes). 62 linhas por
+      série, mesmo período da série de preços. `python indices.py` imprime a
+      comparação de rendimento ação × IBOV × CDI.
+- [x] **Correção:** o pregão do dia corrente deixou de ser gravado no
+      histórico. A barra em formação vinha inconsistente da brapi e o
+      `INSERT OR IGNORE` a congelaria errada para sempre — 13 linhas do dia
+      26/10 foram removidas do banco. Ver DECISOES.md.
 
 ### Limpeza de 26/10/2026 (ao retomar o projeto)
 Três coisas estavam fora do lugar depois de ~7 semanas parado:
@@ -61,9 +70,7 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] nada — próxima é **P1-1** (extrair score para `src/scoring.py`), ou a
-      tarefa 2 do histórico (tabela `indices` com IBOV e Selic/CDI), que ficou
-      desenhada mas não implementada
+- [ ] nada — próxima é **P1-1** (extrair score para `src/scoring.py`)
 
 ---
 
@@ -167,9 +174,11 @@ Depois: P1-9, P1-10 e a faixa P2 (robustez).
 - Rodar coleta: `python src/main.py` → `checknow` força uma coleta
 - Registrar operações: `python src/gerenciar_posicoes.py`
 - Ver ranking: `python src/analise.py`
-- **Estender a série histórica: `cd src && python backfill_historico.py`.**
-  Rodar uma vez por mês. Leva ~45s, não duplica nada se rodar de novo, e é o
-  que impede a série de ficar presa nos 3 meses da janela da brapi.
+- **Estender a série histórica: `cd src && python backfill_historico.py` e
+  depois `python backfill_indices.py`.** Rodar os dois uma vez por mês. Juntos
+  levam ~1 min, não duplicam nada se rodarem de novo, e são o que impede a
+  série de ficar presa nos 3 meses da janela da brapi.
+- Ver o que rendeu mais até agora: `cd src && python indices.py`
 - Backup manual antes de mexer em schema (o automático tem throttle diário e
   pode já ter sido "gasto" hoje):
   `copy data\acoes.db data\acoes_backup_AAAAMMDD.db`

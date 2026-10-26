@@ -65,6 +65,29 @@ dá "0 novos" e não duplica nada.
 **Variante:** `python backfill_historico.py PETR4 VALE3` limita a esses
 tickers, em vez da whitelist inteira.
 
+### `python backfill_indices.py`
+**O que faz:** baixa o Ibovespa (brapi) e as séries diárias de Selic e CDI
+(Banco Central) e grava na tabela `indices`.
+**Quando rodar:** junto com o `backfill_historico.py`, uma vez por mês. O
+Ibovespa tem o mesmo teto de 3 meses; Selic e CDI não têm teto, a API do BCB
+é aberta e não pede token.
+**Comportamento esperado:** ~10s. Por padrão busca as taxas desde o primeiro
+dia que existe em `cotacoes_historicas`, para o benchmark cobrir exatamente o
+período comparável. Avisa se as séries terminarem em datas diferentes — o BCB
+publica a taxa com alguns dias de atraso, e isso é da fonte, não erro.
+**Variante:** `python backfill_indices.py 2026-01-01` busca desde a data dada.
+
+### `python indices.py`
+**O que faz:** imprime a comparação de rendimento — cada ação, o Ibovespa e o
+CDI no mesmo período, ordenados, com a diferença em pontos percentuais contra
+o CDI.
+**Quando rodar:** quando quiser responder "o que rendeu mais até agora?".
+**Não coleta nada** — só lê o que os dois backfills já gravaram.
+**Comportamento esperado:** usa automaticamente a janela em que todas as
+séries existem, mostra quantos pregões cada papel tem, e usa o **fechamento
+ajustado** das ações (considera proventos; o Ibovespa é índice de retorno
+total, então comparar com preço cru subestimaria as ações).
+
 ---
 
 ## Scripts de manutenção (uso pontual, não diário)
@@ -114,6 +137,16 @@ duplicar, e descarte de pontos sem data ou sem fechamento.
 **Comportamento esperado:** `15/15 testes passaram`, mais uma tabela mostrando
 o que a API manda e o que vai (ou não) para o banco em cada caso de borda.
 Usa banco temporário e não chama a API — não toca no `data/acoes.db`.
+
+### `python test_indices.py`
+**O que faz:** confirma que a tabela `indices` e os coletores de benchmark
+estão certos — conversão do formato do BCB, produtório vs soma na taxa
+diária, variação percentual do Ibovespa, reexecução sem duplicar.
+**Quando rodar:** depois de mexer em `indices.py` ou em `salvar_indices()`.
+**Comportamento esperado:** `18/18 testes passaram`, mais uma tabela que
+mostra o erro de somar taxa diária em vez de compor, crescendo com o prazo.
+As três linhas "pulando ponto que nao consegui converter" no meio da saída
+são esperadas: fazem parte de um teste de dado malformado.
 
 ### `python test_bolsai.py`
 **O que faz:** faz uma chamada direta e crua à API BolsAI para um ticker, sem

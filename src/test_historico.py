@@ -138,8 +138,9 @@ def teste_07_rodar_duas_vezes_nao_duplica():
     with BancoTemporario() as temporario:
         pontos = [ponto(2026, 7, 28), ponto(2026, 7, 29, close=11.0)]
 
-        novas_primeira, _ = banco.salvar_cotacoes_historicas("PETR4", pontos)
-        novas_segunda, _ = banco.salvar_cotacoes_historicas("PETR4", pontos)
+        primeira = banco.salvar_cotacoes_historicas("PETR4", pontos)
+        segunda = banco.salvar_cotacoes_historicas("PETR4", pontos)
+        novas_primeira, novas_segunda = primeira.novas, segunda.novas
 
         assert novas_primeira == 2, f"primeira execucao deveria gravar 2, gravou {novas_primeira}"
         assert novas_segunda == 0, (
@@ -162,7 +163,7 @@ def teste_08_reexecucao_preserva_o_valor_original():
 def teste_09_dias_novos_entram_sem_mexer_nos_antigos():
     with BancoTemporario() as temporario:
         banco.salvar_cotacoes_historicas("PETR4", [ponto(2026, 7, 28), ponto(2026, 7, 29)])
-        novas, _ = banco.salvar_cotacoes_historicas("PETR4", [ponto(2026, 7, 29), ponto(2026, 7, 30)])
+        novas = banco.salvar_cotacoes_historicas("PETR4", [ponto(2026, 7, 29), ponto(2026, 7, 30)]).novas
 
         assert novas == 1, f"so o dia 30 era novo, mas gravou {novas}"
         assert len(temporario.linhas()) == 3, "e assim que a janela deslizante estende a serie"
@@ -173,23 +174,23 @@ def teste_09_dias_novos_entram_sem_mexer_nos_antigos():
 # --------------------------------------------------------------------------
 def teste_10_ponto_sem_fechamento_e_descartado():
     with BancoTemporario() as temporario:
-        novas, descartados = banco.salvar_cotacoes_historicas("PETR4", [
+        resultado = banco.salvar_cotacoes_historicas("PETR4", [
             ponto(2026, 7, 28),
             ponto(2026, 7, 29, close=None),
         ])
 
-        assert (novas, descartados) == (1, 1), f"esperado (1, 1), veio ({novas}, {descartados})"
+        assert (resultado.novas, resultado.descartadas) == (1, 1), f"esperado (1, 1), veio {resultado}"
         assert len(temporario.linhas()) == 1, "linha sem fechamento nao serve para calcular retorno"
 
 
 def teste_11_ponto_sem_data_e_descartado():
     with BancoTemporario() as temporario:
-        novas, descartados = banco.salvar_cotacoes_historicas("PETR4", [
+        resultado = banco.salvar_cotacoes_historicas("PETR4", [
             ponto(2026, 7, 28),
             {"close": 10.0, "volume": 1},
         ])
 
-        assert (novas, descartados) == (1, 1)
+        assert (resultado.novas, resultado.descartadas) == (1, 1)
         assert len(temporario.linhas()) == 1
 
 
@@ -207,8 +208,8 @@ def teste_12_ajustado_ausente_vira_null_e_nao_copia_o_fechamento():
 
 def teste_13_lista_vazia_nao_quebra():
     with BancoTemporario() as temporario:
-        novas, descartados = banco.salvar_cotacoes_historicas("PETR4", [])
-        assert (novas, descartados) == (0, 0)
+        resultado = banco.salvar_cotacoes_historicas("PETR4", [])
+        assert (resultado.novas, resultado.descartadas) == (0, 0)
         assert temporario.linhas() == []
 
 
@@ -218,7 +219,7 @@ def teste_13_lista_vazia_nao_quebra():
 def teste_14_tickers_diferentes_coexistem_no_mesmo_dia():
     with BancoTemporario() as temporario:
         banco.salvar_cotacoes_historicas("PETR4", [ponto(2026, 7, 28, close=41.0)])
-        novas, _ = banco.salvar_cotacoes_historicas("VALE3", [ponto(2026, 7, 28, close=55.0)])
+        novas = banco.salvar_cotacoes_historicas("VALE3", [ponto(2026, 7, 28, close=55.0)]).novas
 
         assert novas == 1, "VALE3 foi bloqueada por uma linha de PETR4 do mesmo dia"
         assert len(temporario.linhas()) == 2
@@ -234,6 +235,48 @@ def teste_15_resumo_reporta_periodo_por_ticker():
         resumo = dict((linha[0], linha[1:]) for linha in banco.contar_cotacoes_historicas())
         assert resumo["PETR4"] == (3, "2026-07-28", "2026-07-30")
         assert resumo["VALE3"] == (1, "2026-07-29", "2026-07-29")
+
+
+# --------------------------------------------------------------------------
+# 16. O pregao de hoje nao entra: a barra do dia ainda esta se formando
+# --------------------------------------------------------------------------
+def ponto_de_hoje(close=10.0):
+    hoje = datetime.strptime(banco.hoje_b3(), "%Y-%m-%d")
+    return ponto(hoje.year, hoje.month, hoje.day, close=close)
+
+
+def teste_16_barra_de_hoje_e_ignorada():
+    with BancoTemporario() as temporario:
+        resultado = banco.salvar_cotacoes_historicas("PETR4", [ponto_de_hoje()])
+
+        assert resultado.novas == 0, (
+            "a barra do dia corrente foi gravada -- com INSERT OR IGNORE ela "
+            "ficaria congelada errada para sempre"
+        )
+        assert resultado.em_andamento == 1
+        assert temporario.linhas() == []
+
+
+def teste_17_hoje_e_ignorado_sem_bloquear_os_dias_fechados():
+    with BancoTemporario() as temporario:
+        resultado = banco.salvar_cotacoes_historicas("PETR4", [
+            ponto(2026, 7, 28),
+            ponto(2026, 7, 29),
+            ponto_de_hoje(),
+        ])
+
+        assert resultado.novas == 2, "os dois pregoes fechados tinham que entrar"
+        assert resultado.em_andamento == 1
+        assert len(temporario.linhas()) == 2
+
+
+def teste_18_dia_em_andamento_nao_conta_como_descarte():
+    with BancoTemporario():
+        resultado = banco.salvar_cotacoes_historicas("PETR4", [ponto_de_hoje()])
+
+        assert resultado.descartadas == 0, (
+            "ignorar o pregao de hoje e rotina; so dado corrompido conta como descarte"
+        )
 
 
 if __name__ == "__main__":

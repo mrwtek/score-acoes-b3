@@ -1,4 +1,5 @@
 import sqlite3
+from collections import namedtuple
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -101,6 +102,25 @@ def criar_tabelas():
         )
     """)
 
+    # Benchmarks: Ibovespa (brapi) e Selic/CDI (Banco Central).
+    #
+    # `tipo` existe porque as duas naturezas nao se comparam do mesmo jeito:
+    #   'preco'       -> nivel do indice (IBOV). Rendimento = variacao %.
+    #   'taxa_diaria' -> % ao dia (Selic, CDI). Rendimento = produtorio de
+    #                    (1 + valor/100). Somar taxa diaria da errado.
+    # A taxa fica gravada crua, como o BCB manda; a acumulacao e na leitura.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS indices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo TEXT NOT NULL,
+            data TEXT NOT NULL,
+            valor REAL NOT NULL,
+            tipo TEXT NOT NULL,
+            coletado_em TEXT NOT NULL,
+            UNIQUE(codigo, data)
+        )
+    """)
+
     _adicionar_coluna_se_faltar(cursor, "cotacoes", "data_hora_iso", "TEXT")
     _adicionar_coluna_se_faltar(cursor, "fundamentos", "data_hora_iso", "TEXT")
     _adicionar_coluna_se_faltar(cursor, "transacoes", "data_operacao_iso", "TEXT")
@@ -156,8 +176,19 @@ def normalizar_ticker(ticker):
     return limpo
 
 
+def hoje_b3():
+    """Data de hoje no fuso da B3, em 'YYYY-MM-DD'."""
+    return datetime.now(FUSO_B3).strftime("%Y-%m-%d")
+
+
+# O que aconteceu com os pontos recebidos. `em_andamento` fica separado de
+# `descartadas` de proposito: descartar dado corrompido e ignorar o pregao de
+# hoje sao coisas diferentes, e so a primeira merece preocupacao.
+ResultadoGravacao = namedtuple("ResultadoGravacao", "novas descartadas em_andamento")
+
+
 def salvar_cotacoes_historicas(ticker, pontos):
-    """Grava a serie diaria de um ticker e devolve quantas linhas eram novas.
+    """Grava a serie diaria de um ticker e devolve um ResultadoGravacao.
 
     `pontos` e a lista de dicionarios que a brapi devolve em
     historicalDataPrice. O INSERT OR IGNORE, somado ao UNIQUE(ticker, data),
@@ -166,19 +197,32 @@ def salvar_cotacoes_historicas(ticker, pontos):
 
     Pontos sem data ou sem fechamento sao descartados - sem esses dois campos
     a linha nao serve para calcular retorno nenhum.
+
+    O pregao de HOJE tambem e ignorado. A barra do dia corrente ainda esta se
+    formando e a brapi devolve numeros inconsistentes para ela: em 26/10/2026,
+    as 17h, o ^BVSP aparecia com amplitude de 21% no dia (contra 1,5% tipico) e
+    BBAS3 caindo 29% enquanto VALE3 subia 4%. Como o INSERT OR IGNORE nunca
+    corrige uma linha ja gravada, uma barra parcial ficaria congelada errada
+    para sempre. O preco de hoje ja esta em `cotacoes`, que e a serie de coleta.
     """
     ticker = normalizar_ticker(ticker)
     conexao = sqlite3.connect(CAMINHO_BANCO)
     cursor = conexao.cursor()
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    hoje = hoje_b3()
 
     antes = conexao.total_changes
-    descartados = 0
+    descartadas = 0
+    em_andamento = 0
 
     for ponto in pontos:
         data_iso = _data_do_ponto(ponto)
         if data_iso is None or ponto.get("close") is None:
-            descartados += 1
+            descartadas += 1
+            continue
+
+        if data_iso >= hoje:
+            em_andamento += 1
             continue
 
         cursor.execute("""
@@ -205,7 +249,7 @@ def salvar_cotacoes_historicas(ticker, pontos):
     conexao.commit()
     novas = conexao.total_changes - antes
     conexao.close()
-    return novas, descartados
+    return ResultadoGravacao(novas, descartadas, em_andamento)
 
 
 def _data_do_ponto(ponto):
@@ -235,6 +279,71 @@ def contar_cotacoes_historicas():
         FROM cotacoes_historicas
         GROUP BY ticker
         ORDER BY ticker
+    """)
+    resultado = cursor.fetchall()
+    conexao.close()
+    return resultado
+
+
+TIPO_PRECO = "preco"
+TIPO_TAXA_DIARIA = "taxa_diaria"
+
+
+def salvar_indices(codigo, tipo, pontos):
+    """Grava pontos de um indice e devolve um ResultadoGravacao.
+
+    `pontos` e uma lista de (data_iso, valor). Mesma regra do historico de
+    precos: INSERT OR IGNORE sobre UNIQUE(codigo, data), para o backfill poder
+    rodar quantas vezes quiser, e o dia de hoje fica de fora.
+
+    No caso das taxas o dia corrente nem costuma existir - o BCB publica a
+    Selic e o CDI de um dia depois do fechamento, entao a serie chega com dois
+    ou tres dias de atraso em relacao ao Ibovespa. Isso e da fonte, nao do
+    codigo: quem comparar rendimento acumulado precisa cortar as duas series
+    na mesma data final.
+    """
+    if tipo not in (TIPO_PRECO, TIPO_TAXA_DIARIA):
+        raise ValueError(f"tipo invalido: {tipo!r}. Use {TIPO_PRECO!r} ou {TIPO_TAXA_DIARIA!r}.")
+
+    codigo = str(codigo).strip().upper()
+    conexao = sqlite3.connect(CAMINHO_BANCO)
+    cursor = conexao.cursor()
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    hoje = hoje_b3()
+
+    antes = conexao.total_changes
+    descartadas = 0
+    em_andamento = 0
+
+    for data_iso, valor in pontos:
+        if data_iso is None or valor is None:
+            descartadas += 1
+            continue
+
+        if data_iso >= hoje:
+            em_andamento += 1
+            continue
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO indices (codigo, data, valor, tipo, coletado_em)
+            VALUES (?, ?, ?, ?, ?)
+        """, (codigo, data_iso, valor, tipo, agora))
+
+    conexao.commit()
+    novas = conexao.total_changes - antes
+    conexao.close()
+    return ResultadoGravacao(novas, descartadas, em_andamento)
+
+
+def contar_indices():
+    """Devolve [(codigo, tipo, linhas, primeira_data, ultima_data)]."""
+    conexao = sqlite3.connect(CAMINHO_BANCO)
+    cursor = conexao.cursor()
+    cursor.execute("""
+        SELECT codigo, tipo, COUNT(*), MIN(data), MAX(data)
+        FROM indices
+        GROUP BY codigo, tipo
+        ORDER BY codigo
     """)
     resultado = cursor.fetchall()
     conexao.close()

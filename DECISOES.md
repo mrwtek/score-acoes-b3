@@ -9,6 +9,55 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 26/10/2026 — O pregão do dia corrente nunca entra no histórico
+
+**Decisão:** `salvar_cotacoes_historicas()` e `salvar_indices()` ignoram
+qualquer ponto cuja data seja hoje (fuso da B3).
+
+**Por quê:** a barra do dia em andamento vem inconsistente da brapi, e o
+`INSERT OR IGNORE` nunca corrige uma linha já gravada — então um valor parcial
+ficaria congelado errado para sempre, dentro de uma série que parece confiável.
+
+Sintoma concreto que motivou, medido em 26/10/2026 às 17h43 (13 linhas já
+tinham sido gravadas e precisaram ser removidas): o `^BVSP` aparecia com
+amplitude de 20,98% no dia, contra 1,1%–1,7% nos três pregões anteriores.
+Entre as ações, BBAS3 caía 29,33% e BBDC4 21,70% enquanto VALE3 subia 4,01% e
+WEGE3 4,21% — padrão que nenhum crash de mercado produz. Os três FIIs, que
+quase não oscilam, marcavam 6% a 9% de amplitude.
+
+**Não é perda de informação:** o preço de hoje já está em `cotacoes`, que é a
+série de coleta e existe justamente para isso. O histórico só precisa de
+pregão fechado.
+
+**Alternativa descartada:** gravar com `UPSERT` e deixar o dia seguinte
+corrigir. Funcionaria, mas faria toda reexecução do backfill reescrever linhas
+antigas — perderia a garantia simples de "rodar de novo não muda nada" e
+abriria espaço para um dado ruim da fonte sobrescrever um dado bom.
+
+---
+
+## 26/10/2026 — `tipo` separa nível de índice de taxa diária
+
+**Decisão:** a tabela `indices` guarda IBOV, Selic e CDI juntos, com uma
+coluna `tipo` (`'preco'` ou `'taxa_diaria'`) em vez de tabelas separadas.
+
+**Por quê:** são o mesmo formato (código, data, valor) com a mesma chave, mas
+não se acumulam do mesmo jeito. Nível de índice rende por variação percentual
+entre as pontas; taxa diária rende por produtório de (1 + valor/100). O `tipo`
+é o que impede alguém de somar taxa diária achando que está certo — erro que
+não estoura, só devolve número menor. Em 252 pregões a 0,0505% ao dia, somar
+dá 12,73% e compor dá 13,57%; a tabela do `test_indices.py` mostra o erro
+crescendo com o prazo.
+
+**A taxa fica crua no banco**, como o BCB manda. Gravar acumulado obrigaria a
+recalcular tudo a cada data inicial diferente e perderia o dado de origem.
+
+**Selic e CDI vieram idênticos** nos 62 dias coletados (ambos 3,237%
+acumulados). Mantidos os dois assim mesmo: custa duas linhas por dia e
+protege o dia em que divergirem.
+
+---
+
 ## 26/10/2026 — Histórico fica em tabela própria, não dentro de `cotacoes`
 
 **Decisão:** criar `cotacoes_historicas` separada, em vez de gravar o histórico

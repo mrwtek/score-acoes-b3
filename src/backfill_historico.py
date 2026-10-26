@@ -11,6 +11,9 @@ que o buraco ainda esteja dentro da janela.
 O que esta antes da janela e perda permanente neste plano. Em 26/10/2026 o
 alcance comecava em 28/07/2026.
 
+O pregao do dia corrente nunca e gravado: a barra ainda esta se formando e a
+brapi devolve numeros inconsistentes para ela. Ver salvar_cotacoes_historicas().
+
 Uso:
     python backfill_historico.py              # whitelist inteira
     python backfill_historico.py PETR4 VALE3  # so esses tickers
@@ -50,11 +53,17 @@ def backfill(tickers, intervalo=INTERVALO_HISTORICO_PADRAO):
             print(f"{ticker}: a API respondeu sem nenhum pregao no periodo.")
             continue
 
-        novas, descartados = salvar_cotacoes_historicas(ticker, pontos)
-        total_novas += novas
+        resultado = salvar_cotacoes_historicas(ticker, pontos)
+        total_novas += resultado.novas
 
-        aviso_descarte = f", {descartados} ponto(s) descartado(s) sem data ou fechamento" if descartados else ""
-        print(f"{ticker}: {len(pontos)} pregoes recebidos, {novas} novos no banco{aviso_descarte}")
+        avisos = []
+        if resultado.descartadas:
+            avisos.append(f"{resultado.descartadas} sem data ou fechamento, descartado(s)")
+        if resultado.em_andamento:
+            avisos.append(f"{resultado.em_andamento} do dia em andamento, ignorado(s)")
+        sufixo = f" ({', '.join(avisos)})" if avisos else ""
+
+        print(f"{ticker}: {len(pontos)} pregoes recebidos, {resultado.novas} novos no banco{sufixo}")
 
     return total_novas, falhas
 

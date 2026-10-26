@@ -34,8 +34,12 @@ trade-off antes de decidir por mim.
       main.py                 loop de coleta em thread + CLI
       gerenciar_posicoes.py   CLI de carteira (buy/sell/show)
       analise.py              cálculo dos scores (será extraído p/ scoring.py)
+      indices.py              benchmarks: IBOV (brapi) e Selic/CDI (BCB), mais
+                              as contas de rendimento; `python indices.py`
+                              imprime a comparação ação × IBOV × CDI
       backfill_historico.py   backfill de preços diários da brapi; NÃO é de uso
                               único — roda uma vez por mês para estender a série
+      backfill_indices.py     idem, para IBOV, Selic e CDI
       backfill_transacoes.py  script de uso único, já executado
       migrar_datas_iso.py     script de uso único, já executado
       test_bolsai.py          script solto de teste manual da API BolsAI
@@ -55,6 +59,19 @@ A criar conforme o backlog: `scoring.py`, `carteira.py`, `sinais.py`,
 `GET https://brapi.dev/api/quote/{ticker}` com `?token=BRAPI_TOKEN`
 Resposta usada: `results[0]` → `regularMarketPrice`, `regularMarketVolume`,
 `marketCap`, `priceEarnings`, `earningsPerShare`.
+
+**brapi** — histórico e Ibovespa
+Mesma URL com `?range=3mo&interval=1d` → `results[0].historicalDataPrice`,
+lista de `{date, open, high, low, close, volume, adjustedClose}`. `date` é
+epoch em **segundos, na meia-noite de São Paulo** — converter com fuso
+explícito, nunca com o fuso da máquina. O Ibovespa é o símbolo `^BVSP`.
+Plano free: só os ranges `1d, 5d, 1mo, 3mo`, e 20 requisições por minuto.
+
+**Banco Central (SGS)** — Selic e CDI
+`GET https://api.bcb.gov.br/dados/serie/bcdata.sgs.{serie}/dados?formato=json`
+com `dataInicial`/`dataFinal` em `DD/MM/AAAA`. Série 11 = Selic diária,
+12 = CDI diária. **Aberta, não pede token.** Resposta devolve `data` no
+formato brasileiro e `valor` como **string** — normalizar os dois na entrada.
 
 **BolsAI** — fundamentos
 `GET https://api.usebolsai.com/api/v1/fundamentals/{ticker}` com header
@@ -98,7 +115,22 @@ antes do código.
         `cotacoes`**: `cotacoes` é a série de coleta, com várias linhas por dia
         e só o preço do momento. E use `fechamento_ajustado`, não `fechamento`,
         sempre que comparar rendimento — o ajustado considera proventos e o
-        Ibovespa é índice de retorno total.
+        Ibovespa é índice de retorno total. Medido em 23/10/2026: PETR4 rendeu
+        +46,34% pelo ajustado contra +42,39% pelo cru no mesmo período.
+        **O pregão do dia corrente nunca é gravado aqui** — a barra ainda está
+        se formando e o `INSERT OR IGNORE` congelaria o valor errado.
+
+    indices(id, codigo, data, valor, tipo, coletado_em, UNIQUE(codigo, data))
+        benchmarks. `codigo` ∈ {IBOV, SELIC, CDI}; `data` em ISO.
+        `tipo` decide como se lê o `valor`:
+          'preco'       → nível do índice (IBOV); rendimento = variação %
+          'taxa_diaria' → % ao dia (Selic, CDI); rendimento = produtório de
+                          (1 + valor/100). **Somar taxa diária dá errado** —
+                          em 252 pregões a 0,0505% a.d., somar dá 12,73% e
+                          compor dá 13,57%.
+        A taxa fica gravada crua, como o BCB manda; a acumulação é na leitura.
+        O BCB publica Selic e CDI com alguns dias de atraso, então essa série
+        costuma terminar antes da do Ibovespa — use `janela_comparavel()`.
 
 **Duas representações de data convivem de propósito.** As colunas `data` /
 `hora_coleta` / `data_operacao` seguem no formato brasileiro (`%d/%m/%Y`) e
