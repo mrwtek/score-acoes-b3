@@ -11,18 +11,21 @@ O caso 10 e um smoke test que le o banco real.
 import numpy as np
 import pandas as pd
 
-from analise import (
+# As contas moram no scoring.py desde o P1-1; o analise.py so carrega o banco.
+# Por isso os testes de formula (1 a 9) importam de scoring e nao tocam em
+# disco, e so o smoke test (10) passa pelo analise.
+from analise import ranking_atual
+from scoring import (
     CATEGORIAS_FUNDAMENTALISTAS,
     LIMITE_BOOK_TO_MARKET,
     LIMITE_YIELD,
     adicionar_metricas_valuation,
-    calcular_score_geral,
     normalizar,
 )
 
 
 def score_valuation(df):
-    """Reproduz a categoria valuation usando as funcoes reais do analise.py."""
+    """Reproduz a categoria valuation usando as funcoes reais do scoring.py."""
     derivado = adicionar_metricas_valuation(df)
     scores = pd.DataFrame(index=derivado.index)
     for indicador, maior_melhor in CATEGORIAS_FUNDAMENTALISTAS["valuation"].items():
@@ -184,7 +187,7 @@ def teste_09_contrato_da_categoria():
 # 10. Smoke test no banco real: o ranking mostra as colunas de conferencia
 # --------------------------------------------------------------------------
 def teste_10_ranking_mostra_colunas_de_conferencia():
-    ranking = calcular_score_geral()
+    ranking = ranking_atual()
 
     for coluna in ["pl", "pvp", "earnings_yield", "book_to_market", "score_geral"]:
         assert coluna in ranking.columns, f"coluna {coluna} faltando no ranking"

@@ -9,6 +9,36 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 26/10/2026 — `scoring.py` não lê o banco
+
+**Decisão:** no P1-1, em vez de mover o código inteiro, separar em duas
+camadas: `scoring.py` recebe DataFrames e devolve DataFrames; `analise.py`
+carrega do SQLite e orquestra.
+
+**Por quê:** o bloco seguinte (P1-11 a P1-2) reescreve o miolo do cálculo, e o
+CLAUDE.md pede teste com dados sintéticos e casos de borda em toda mudança de
+lógica. Com o cálculo amarrado ao banco, conferir "ROE de 18% vira nota 80"
+exige montar um banco temporário — foi o que precisei fazer no
+`test_historico.py`, onde valeu a pena porque o que estava sob teste *era* a
+gravação. Para uma fórmula, é maquinário demais.
+
+Há também a questão de determinismo: teste que lê o `acoes.db` real muda de
+resultado quando entram dados novos. Falha sem bug é o pior tipo de falha —
+custa meia hora procurando defeito onde não tem.
+
+**Não é padrão novo no projeto:** nove dos dez testes do `test_valuation.py` já
+montavam DataFrame na mão e chamavam `normalizar()` direto. O P1-1 só terminou
+de levar o código para onde o teste já estava.
+
+**Custo aceito:** as assinaturas mudaram, então foi mais que recortar e colar.
+Mitigado com `ranking_atual()` no `analise.py`, que mantém a chamada sem
+argumentos para quem só quer o ranking.
+
+**Alternativa descartada:** recorte-e-cole puro, com `scoring.py` lendo o banco.
+Menor risco imediato, mas empurraria o atrito para as quatro tarefas seguintes.
+
+---
+
 ## 26/10/2026 — O pregão do dia corrente nunca entra no histórico
 
 **Decisão:** `salvar_cotacoes_historicas()` e `salvar_indices()` ignoram

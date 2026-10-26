@@ -33,7 +33,11 @@ trade-off antes de decidir por mim.
       banco.py                SQLite: criar_tabelas, salvar/registrar
       main.py                 loop de coleta em thread + CLI
       gerenciar_posicoes.py   CLI de carteira (buy/sell/show)
-      analise.py              cálculo dos scores (será extraído p/ scoring.py)
+      scoring.py              as fórmulas do score. NÃO lê o banco: recebe
+                              DataFrames e devolve DataFrames
+      analise.py              carregadores do banco + `ranking_atual()` +
+                              impressão do ranking. Sabe de SQLite, não de
+                              fórmula
       indices.py              benchmarks: IBOV (brapi) e Selic/CDI (BCB), mais
                               as contas de rendimento; `python indices.py`
                               imprime a comparação ação × IBOV × CDI
@@ -50,7 +54,7 @@ trade-off antes de decidir por mim.
       analise.ipynb           pesquisa livre (PCA, ADF, ACF/PACF, ARIMA)
     .env                      NA RAIZ, não em subpasta (já causou bug)
 
-A criar conforme o backlog: `scoring.py`, `carteira.py`, `sinais.py`,
+A criar conforme o backlog: `carteira.py`, `sinais.py`,
 `snapshots.py`, `app.py` (Streamlit).
 
 ## Fontes de dados

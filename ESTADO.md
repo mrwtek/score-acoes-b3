@@ -51,6 +51,11 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       `backfill_indices.py` e `test_indices.py` (18 testes). 62 linhas por
       série, mesmo período da série de preços. `python indices.py` imprime a
       comparação de rendimento ação × IBOV × CDI.
+- [x] **P1-1** lógica de score extraída de `analise.py` para `src/scoring.py`.
+      `scoring.py` não lê o banco: recebe DataFrames e devolve DataFrames, para
+      o bloco P1-11→P1-2 poder ser testado com dados sintéticos. `analise.py`
+      ficou com os carregadores e ganhou `ranking_atual()`. Ranking conferido
+      byte a byte contra o baseline: **idêntico**.
 - [x] **Correção:** o pregão do dia corrente deixou de ser gravado no
       histórico. A barra em formação vinha inconsistente da brapi e o
       `INSERT OR IGNORE` a congelaria errada para sempre — 13 linhas do dia
@@ -70,7 +75,8 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] nada — próxima é **P1-1** (extrair score para `src/scoring.py`)
+- [ ] nada — próxima é **BUG-01** (o ranking está rodando sobre o fundamento
+      mais antigo do banco; conserto de uma linha, mas muda todos os números)
 
 ---
 
@@ -83,8 +89,17 @@ Todo o bloco de score vem **antes** do P1-4, para não gravar snapshots numa
 escala que será trocada.
 
 ### Bloco de score (o miolo da revisão)
-- [ ] **P1-1** extrair lógica de score de `analise.py` para `src/scoring.py`
-      *Aceite:* `analise.py` importa de `scoring.py`; ranking sai igual.
+- [ ] **BUG-01** `carregar_fundamentos_mais_recentes()` pega o fundamento
+      ERRADO. O `MAX(data)` compara texto em `dd/mm/aaaa`, então `31/08/2026`
+      sai maior que `14/09/2026` (porque `'3' > '1'`). Hoje os 10 tickers
+      pegam o registro de 31/08 em vez do de 14/09 — **o ranking inteiro roda
+      sobre o dado mais antigo que existe no banco.**
+      *Conserto:* trocar por `data_hora_iso`. É uma linha.
+      *Aceite:* o ranking passa a usar 14/09; guardar o antes e o depois no
+      commit, porque todos os números mudam.
+      Achado durante o P1-1 e deixado de fora de propósito: refatoração e
+      mudança de comportamento não entram no mesmo commit.
+      **Fazer antes do P1-11** — não adianta calibrar faixa sobre dado errado.
 - [ ] **P1-11** faixas absolutas para rentabilidade, margens, crescimento e
       segurança (substitui min-max) — PRD §7A.3 a §7A.6
       *Aceite:* mudar a whitelist não altera a nota de um ticker que não mudou.
