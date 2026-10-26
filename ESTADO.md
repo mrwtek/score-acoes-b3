@@ -56,6 +56,14 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       o bloco P1-11→P1-2 poder ser testado com dados sintéticos. `analise.py`
       ficou com os carregadores e ganhou `ranking_atual()`. Ranking conferido
       byte a byte contra o baseline: **idêntico**.
+- [x] **BUG-01** `carregar_fundamentos_mais_recentes()` ordenava por `MAX(data)`
+      textual (`dd/mm/aaaa`), então `31/08/2026` saía maior que `14/09/2026` e
+      o ranking rodava sobre o fundamento mais antigo do banco. Trocado por
+      `data_hora_iso`. Efeito medido: só a categoria valuation mudou (P/L e
+      P/VP se movem com o preço; ROE, margens e CAGR vêm de balanço trimestral
+      e eram iguais nas duas datas), com no máximo 0,9 ponto de diferença no
+      `score_geral` e **ordem do ranking inalterada**. `test_analise.py` cobre
+      a armadilha com 6 testes.
 - [x] **Correção:** o pregão do dia corrente deixou de ser gravado no
       histórico. A barra em formação vinha inconsistente da brapi e o
       `INSERT OR IGNORE` a congelaria errada para sempre — 13 linhas do dia
@@ -75,8 +83,8 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] nada — próxima é **BUG-01** (o ranking está rodando sobre o fundamento
-      mais antigo do banco; conserto de uma linha, mas muda todos os números)
+- [ ] nada — próxima é **P1-11** (faixas absolutas para rentabilidade,
+      margens, crescimento e segurança)
 
 ---
 
@@ -89,17 +97,6 @@ Todo o bloco de score vem **antes** do P1-4, para não gravar snapshots numa
 escala que será trocada.
 
 ### Bloco de score (o miolo da revisão)
-- [ ] **BUG-01** `carregar_fundamentos_mais_recentes()` pega o fundamento
-      ERRADO. O `MAX(data)` compara texto em `dd/mm/aaaa`, então `31/08/2026`
-      sai maior que `14/09/2026` (porque `'3' > '1'`). Hoje os 10 tickers
-      pegam o registro de 31/08 em vez do de 14/09 — **o ranking inteiro roda
-      sobre o dado mais antigo que existe no banco.**
-      *Conserto:* trocar por `data_hora_iso`. É uma linha.
-      *Aceite:* o ranking passa a usar 14/09; guardar o antes e o depois no
-      commit, porque todos os números mudam.
-      Achado durante o P1-1 e deixado de fora de propósito: refatoração e
-      mudança de comportamento não entram no mesmo commit.
-      **Fazer antes do P1-11** — não adianta calibrar faixa sobre dado errado.
 - [ ] **P1-11** faixas absolutas para rentabilidade, margens, crescimento e
       segurança (substitui min-max) — PRD §7A.3 a §7A.6
       *Aceite:* mudar a whitelist não altera a nota de um ticker que não mudou.

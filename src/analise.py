@@ -38,31 +38,27 @@ def carregar_posicoes():
 
 
 def carregar_fundamentos_mais_recentes():
-    """Um registro por ticker, indexado por ticker.
+    """Um registro por ticker, o mais recente, indexado por ticker.
 
-    ATENCAO - BUG CONHECIDO, nao corrigido aqui de proposito:
-    o MAX(data) abaixo compara a coluna `data` como TEXTO, no formato
-    dd/mm/aaaa. Isso nao ordena por tempo: '31/08/2026' sai maior que
-    '14/09/2026' porque '3' > '1'. Hoje os dez tickers acabam pegando o
-    fundamento de 31/08 em vez do de 14/09, ou seja, o ranking roda sobre o
-    dado mais ANTIGO.
+    Ordena por `data_hora_iso`, nunca por `data` (BUG-01). A coluna `data`
+    guarda dd/mm/aaaa, e MAX() sobre texto compara caractere a caractere:
+    '31/08/2026' sai maior que '14/09/2026' porque '3' > '1'. O efeito nao e
+    erro nem linha faltando - e o ranking inteiro calculado sobre o fundamento
+    mais ANTIGO do banco, em silencio.
 
-    O conserto e trocar por data_hora_iso, mas isso muda todos os numeros do
-    ranking - e o criterio de aceite do P1-1 era justamente "ranking sai
-    igual", que e o que prova que a extracao nao quebrou nada. Separado de
-    proposito: refatoracao e mudanca de comportamento nao entram no mesmo
-    commit. Ver ESTADO.md.
+    Vale para qualquer consulta nova: as colunas *_iso existem para isso.
     """
     conexao = sqlite3.connect(CAMINHO_BANCO)
     df = pd.read_sql_query("""
         SELECT f.*
         FROM fundamentos f
         INNER JOIN (
-            SELECT ticker, MAX(data) AS data_mais_recente
+            SELECT ticker, MAX(data_hora_iso) AS mais_recente
             FROM fundamentos
+            WHERE data_hora_iso IS NOT NULL
             GROUP BY ticker
         ) ultimo
-        ON f.ticker = ultimo.ticker AND f.data = ultimo.data_mais_recente
+        ON f.ticker = ultimo.ticker AND f.data_hora_iso = ultimo.mais_recente
     """, conexao)
     conexao.close()
     return df.set_index("ticker")

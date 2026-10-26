@@ -9,6 +9,35 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 26/10/2026 — BUG-01: o ranking rodava sobre o fundamento mais antigo
+
+**O que era:** `carregar_fundamentos_mais_recentes()` escolhia a linha com
+`MAX(data)`. A coluna `data` é texto em `dd/mm/aaaa`, e SQLite compara texto
+caractere a caractere — então `'31/08/2026' > '14/09/2026'`, porque `'3' > '1'`.
+Os dez tickers vinham pegando o registro de 31/08 em vez do de 14/09.
+
+**Por que não apareceu antes:** não dava erro, não faltava linha, não havia
+`NULL`. A consulta devolvia exatamente dez linhas, uma por ticker, com números
+plausíveis. Só eram os números errados. É a falha que o `data_hora_iso` do P0-3
+foi criado para evitar, numa consulta escrita antes dele existir.
+
+**Impacto medido, e ele é menor do que parece:** só a categoria valuation mudou.
+P/L e P/VP se movem com o preço todo dia; ROE, margens, CAGR e dívida/PL vêm de
+balanço trimestral e eram idênticos nas duas datas. Maior diferença no
+`score_geral` foi 0,9 ponto (ISAE4), e a ordem do ranking não mudou.
+
+Isso não torna o bug inofensivo — só mostra que ele estava sendo mascarado por
+duas semanas de distância entre os registros. Com a coleta rodando meses, as
+duas datas se afastam e o erro cresce junto.
+
+**O que ficou como defesa:** `test_analise.py`, seis testes sobre os
+carregadores. Antes não existia nenhum, porque "escolher qual linha ler" não
+parece lógica de cálculo — mas é a entrada de todo o cálculo. Dois dos testes
+cobrem a virada de mês e a de ano, que é onde a comparação textual erra mais.
+Conferido que a consulta antiga reprova no teste novo.
+
+---
+
 ## 26/10/2026 — `scoring.py` não lê o banco
 
 **Decisão:** no P1-1, em vez de mover o código inteiro, separar em duas

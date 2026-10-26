@@ -128,6 +128,15 @@ horário de coleta.
 existe só para lembrar que feriados não são considerados (limitação
 conhecida, não bug).
 
+### `python test_analise.py`
+**O que faz:** confirma que os carregadores do `analise.py` leem a linha
+certa — principalmente que o fundamento escolhido é o mais recente de
+verdade, e não o "maior" na comparação de texto `dd/mm/aaaa` (BUG-01).
+**Quando rodar:** depois de mexer em qualquer consulta do `analise.py`.
+**Comportamento esperado:** `6/6 testes passaram`, mais uma tabela mostrando
+em quais pares de datas a ordem textual discorda da ordem cronológica.
+Usa banco temporário — não toca no `data/acoes.db`.
+
 ### `python test_historico.py`
 **O que faz:** confirma que o backfill de preços históricos grava certo —
 conversão da data no fuso da B3, normalização de ticker, reexecução sem
