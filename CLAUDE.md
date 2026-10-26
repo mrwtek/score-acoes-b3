@@ -176,9 +176,12 @@ universo. Isso é o que torna os snapshots comparáveis ao longo do tempo.
 - `score_geral` **não existe mais** (removido no P1-13). Ficam duas colunas
   independentes: `score_fundamentalista` e `score_reversao`, lidas lado a lado
   e nunca somadas.
-- `score_reversao` (antigo `score_preco`) mede **queda de preço, não
-  barateamento**. É uma aposta contrária deliberada. Nunca descreva como
-  valuation.
+- `score_reversao` (antigo `score_preco`, renomeado no P1-3) mede **queda de
+  preço, não barateamento**. É uma aposta contrária deliberada. Nunca descreva
+  como valuation. Lê `cotacoes_historicas` pelo **fechamento ajustado**, em
+  janela de 252 pregões, com mínimo de 60 observações — abaixo disso devolve
+  50 com flag `dados_insuficientes`. A flag `janela_completa` separa "passou
+  do mínimo" de "tem um ano de série".
 - Financeiras não pontuam dívida/PL, ROA nem margens (`setores.py`). O
   indicador inaplicável é tratado como ausente — sai do cálculo e o peso é
   redistribuído — e não com nota neutra como diz a 7A.6. Divergência
@@ -229,8 +232,10 @@ atrapalharem a tarefa atual, mas não conserte fora de hora.
 - Min-max sem tratamento de outlier nas categorias ainda não migradas; o pior
   colocado sempre tira exatamente 0 e o melhor 100, o que é artefato e não
   informação (P1-2, P1-11).
-- `score_reversao` usa toda a base coletada como range; com histórico curto o
-  número vira interruptor (0 ou 100) em vez de escala (P1-3).
+- `score_reversao` com janela parcial ainda é frágil: hoje são 63 de 252
+  pregões, e quem está na mínima tira exatamente 100. A janela e o mínimo já
+  são explícitos (P1-3 feito) e o ranking mostra `63/252`, mas só o tempo
+  enche a janela.
 - Book-to-market não tem teto para P/VP próximo de zero — o earnings yield tem.
   Será resolvido de forma geral pela winsorização (P1-2).
 - Whitelist pequena para normalização relativa e PCA terem significado

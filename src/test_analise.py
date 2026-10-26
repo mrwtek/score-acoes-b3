@@ -50,12 +50,13 @@ class BancoTemporario:
         conexao.commit()
         conexao.close()
 
-    def gravar_cotacao(self, ticker, preco):
+    def gravar_cotacao(self, ticker, preco, data="2026-10-01"):
         conexao = sqlite3.connect(self.caminho)
         conexao.execute(
-            "INSERT INTO cotacoes (ticker, data, hora_coleta, preco) "
-            "VALUES (?, '01/01/2026', '10:00:00', ?)",
-            (ticker, preco),
+            "INSERT OR IGNORE INTO cotacoes_historicas "
+            "(ticker, data, fechamento, fechamento_ajustado, coletado_em) "
+            "VALUES (?, ?, ?, ?, 'teste')",
+            (ticker, data, preco, preco),
         )
         conexao.commit()
         conexao.close()
@@ -125,16 +126,39 @@ def teste_05_ticker_com_um_unico_registro_aparece():
 # --------------------------------------------------------------------------
 # 6. A outra fragilidade do carregamento: a ordem das cotacoes
 # --------------------------------------------------------------------------
-def teste_06_precos_saem_na_ordem_de_insercao():
+def teste_06_precos_vem_da_serie_historica_ordenados_por_data():
     with BancoTemporario() as temporario:
-        for preco in (10.0, 30.0, 20.0):
-            temporario.gravar_cotacao("PETR4", preco)
+        # gravados fora de ordem de proposito
+        temporario.gravar_cotacao("PETR4", 30.0, "2026-10-03")
+        temporario.gravar_cotacao("PETR4", 10.0, "2026-10-01")
+        temporario.gravar_cotacao("PETR4", 20.0, "2026-10-02")
 
-        precos = analise.carregar_precos_para_score()["preco"].tolist()
+        df = analise.carregar_precos_para_score()
 
-        assert precos == [10.0, 30.0, 20.0], (
-            "a ordem mudou. O calcular_score_preco() pega o preco atual com "
-            "agg('last'), entao um ORDER BY aqui mudaria o score em silencio"
+        assert list(df["fechamento"]) == [10.0, 20.0, 30.0], (
+            "a serie tem que sair ordenada por data: o score de reversao usa "
+            "a ultima observacao como preco atual"
+        )
+        assert "fechamento_ajustado" in df.columns, (
+            "o score usa o ajustado; sem ele o dia do provento vira queda"
+        )
+
+
+def teste_07_carregador_le_cotacoes_historicas_e_nao_cotacoes():
+    with BancoTemporario() as temporario:
+        temporario.gravar_cotacao("PETR4", 50.0)
+        # uma linha na tabela de coleta, que NAO deve ser usada
+        conexao = sqlite3.connect(temporario.caminho)
+        conexao.execute(
+            "INSERT INTO cotacoes (ticker, data, hora_coleta, preco) "
+            "VALUES ('PETR4', '01/01/2026', '10:00:00', 999.0)")
+        conexao.commit(); conexao.close()
+
+        df = analise.carregar_precos_para_score()
+
+        assert list(df["fechamento"]) == [50.0], (
+            "voltou a ler a tabela `cotacoes`, que e a serie de COLETA -- "
+            "varias linhas por dia e so nos dias em que o loop rodou"
         )
 
 

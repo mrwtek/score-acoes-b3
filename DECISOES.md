@@ -9,6 +9,40 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 26/10/2026 — Score de reversão: janela de 252, mínimo de 60, fechamento ajustado
+
+**Decisão (P1-3):** o score de reversão passa a ler `cotacoes_historicas` em
+vez de `cotacoes`, com janela fixa de 252 pregões, mínimo de 60 observações e
+cálculo sobre o **fechamento ajustado**.
+
+**Por que a troca de tabela era urgente:** `cotacoes` é a série de COLETA —
+várias linhas por dia, só o preço do momento, e só nos dias em que o loop
+rodou. Eram **7 observações** contra os 63 pregões reais que já existiam ao
+lado. Na prática o sistema não enxergou a queda de 26/10: mostrava BBAS3 com
+preço de R$ 22,20 (de 14/09) e nota de reversão 30,8, quando o papel estava a
+R$ 17,47 na mínima de três meses.
+
+**Por que o ajustado:** no dia do provento o preço cai sem a empresa ter
+piorado. Com o fechamento cru, todo ex-dividendo entraria na conta como queda
+— e o score de reversão existe justamente para medir queda.
+
+**Por que 252 e 60:** 252 pregões é um ano de bolsa, a mesma janela da "máxima
+e mínima de 52 semanas" que o mercado usa. Abaixo de 60 observações o range
+não descreve distribuição nenhuma: com 20 pregões o último preço é quase
+sempre a máxima ou a mínima, e a nota vira interruptor de 0 ou 100.
+
+**Duas flags, não uma.** `dados_insuficientes` dispara abaixo de 60;
+`janela_completa` só é verdadeira com 252. Hoje temos 63 pregões — passa do
+mínimo e **falha a janela completa**, que é exatamente a situação que merece
+aviso. Sem a segunda flag, 25% da janela passaria por série de um ano.
+
+**Limitação que fica:** com 63 pregões a nota ainda é frágil. BBAS3 tira 100,0
+porque está na mínima literal da janela. Não é erro de cálculo — é o que uma
+janela curta permite dizer. O `63/252` no ranking existe para você não ler
+esse 100 como se fosse de uma série anual.
+
+---
+
 ## 26/10/2026 — Inaplicável é tratado como ausente, não como nota neutra
 
 **Decisão:** no P1-12/P1-13, indicador que não se aplica ao setor sai do

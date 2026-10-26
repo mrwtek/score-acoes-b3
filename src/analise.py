@@ -67,14 +67,24 @@ def carregar_fundamentos_mais_recentes():
 
 
 def carregar_precos_para_score():
-    """Ticker e preco de todas as coletas, na ordem de insercao.
+    """Serie diaria de `cotacoes_historicas`, para o score de reversao (P1-3).
 
-    Sem ORDER BY de proposito: o calcular_score_preco() pega o "preco atual"
-    com agg("last"), entao depende desta ordem. Ordenar aqui mudaria o
-    resultado em silencio.
+    Trocou a tabela `cotacoes` por esta. A `cotacoes` e a serie de COLETA:
+    varias linhas por dia, so o preco do momento, e so existe nos dias em que
+    o loop rodou -- eram 7 dias contra os 63 pregoes de verdade que a
+    `cotacoes_historicas` ja tem. O score de reversao estava sendo calculado
+    sobre sete observacoes.
+
+    Traz os dois fechamentos: o ajustado, que e o que entra na conta (no dia
+    do provento o preco cai sem a empresa ter piorado), e o cru, que e o que
+    aparece na tela e serve para conferencia.
     """
     conexao = sqlite3.connect(CAMINHO_BANCO)
-    df = pd.read_sql_query("SELECT ticker, preco FROM cotacoes", conexao)
+    df = pd.read_sql_query("""
+        SELECT ticker, data, fechamento, fechamento_ajustado
+        FROM cotacoes_historicas
+        ORDER BY ticker, data
+    """, conexao)
     conexao.close()
     return df
 
@@ -128,11 +138,21 @@ if __name__ == "__main__":
         for usados, aplicaveis in zip(ranking["indicadores_usados"],
                                       ranking["indicadores_aplicaveis"])
     ]
+    # a janela do score de reversao vira texto: "63/252" diz mais que um bool
+    ranking_exibicao["janela"] = [
+        f"{int(obs)}/{scoring.JANELA_REVERSAO}" + (" !" if insuf else "")
+        for obs, insuf in zip(ranking["observacoes"].fillna(0),
+                              ranking["dados_insuficientes"].fillna(True))
+    ]
     ranking_exibicao = ranking_exibicao.drop(
-        columns=["indicadores_usados", "indicadores_aplicaveis"]
+        columns=["indicadores_usados", "indicadores_aplicaveis",
+                 "observacoes", "dados_insuficientes", "janela_completa"]
     )
     print(ranking_exibicao.to_string())
 
     print("\ncobertura = indicadores que pontuaram, de quantos se aplicam ao setor.")
     print("Categoria vazia nao vira zero: sai do calculo e o peso e redistribuido.")
-    print("score_fundamentalista e score_preco sao lidos lado a lado, nunca somados.")
+    print(f"janela = pregoes usados no score de reversao, de {scoring.JANELA_REVERSAO}."
+          f" '!' = abaixo do minimo de {scoring.MINIMO_OBSERVACOES}, nota neutra.")
+    print("score_reversao mede QUEDA, nao barateamento -- aposta contraria deliberada.")
+    print("Ele e o score_fundamentalista sao lidos lado a lado, nunca somados.")

@@ -14,6 +14,9 @@ import pandas as pd
 
 from scoring import (
     CATEGORIAS_FUNDAMENTALISTAS,
+    JANELA_REVERSAO,
+    MINIMO_OBSERVACOES,
+    calcular_score_reversao,
     PESOS_CATEGORIA,
     calcular_ranking,
     calcular_score_fundamentalista,
@@ -38,11 +41,18 @@ def montar(**por_ticker):
     return pd.DataFrame.from_dict(linhas, orient="index")[COLUNAS]
 
 
-def cotacoes_de(*tickers):
-    return pd.DataFrame(
-        {"ticker": list(tickers) * 2,
-         "preco": [10.0] * len(tickers) + [12.0] * len(tickers)}
-    )
+def precos_de(*tickers, pregoes=70):
+    """Serie diaria sintetica, longa o bastante para passar do minimo."""
+    linhas = []
+    for ticker in tickers:
+        for passo in range(pregoes):
+            linhas.append({
+                "ticker": ticker,
+                "data": f"2026-{1 + passo // 28:02d}-{1 + passo % 28:02d}",
+                "fechamento": 10.0 + passo * 0.1,
+                "fechamento_ajustado": 10.0 + passo * 0.1,
+            })
+    return pd.DataFrame(linhas)
 
 
 # --------------------------------------------------------------------------
@@ -180,30 +190,140 @@ def teste_11_ticker_sem_nenhum_dado_nao_vira_zero():
 # 12. O fim do score_geral
 # --------------------------------------------------------------------------
 def teste_12_score_geral_nao_existe_mais():
-    r = calcular_ranking(montar(PETR4={}, VALE3={}), cotacoes_de("PETR4", "VALE3"))
+    r = calcular_ranking(montar(PETR4={}, VALE3={}), precos_de("PETR4", "VALE3"))
 
     assert "score_geral" not in r.columns, (
         "score_geral voltou. Ele somava 0,6*fundamentalista + 0,4*preco, o que "
         "fazia 55% do numero final ser alguma forma de 'esta barato'"
     )
     assert "score_fundamentalista" in r.columns
-    assert "score_preco" in r.columns, "os dois continuam, lado a lado"
+    assert "score_reversao" in r.columns, "os dois continuam, lado a lado"
+    assert "score_preco" not in r.columns, (
+        "score_preco voltou. Foi renomeado no P1-3: a metrica mede QUEDA, nao "
+        "barateamento, e o nome antigo induzia leitura de valuation"
+    )
 
 
 def teste_13_ranking_ordena_por_fundamentalista():
     r = calcular_ranking(montar(PETR4={"roe": 40.0}, VALE3={"roe": 2.0}),
-                         cotacoes_de("PETR4", "VALE3"))
+                         precos_de("PETR4", "VALE3"))
     assert list(r.index) == ["PETR4", "VALE3"]
     assert r["score_fundamentalista"].is_monotonic_decreasing
 
 
-def teste_14_ticker_sem_cotacao_fica_sem_score_de_preco():
-    r = calcular_ranking(montar(PETR4={}, VALE3={}), cotacoes_de("PETR4"))
+def teste_14_ticker_sem_cotacao_fica_sem_score_de_reversao():
+    r = calcular_ranking(montar(PETR4={}, VALE3={}), precos_de("PETR4"))
 
-    assert pd.isna(r.loc["VALE3", "score_preco"]), (
-        "sem cotacao, o score de preco era preenchido com 50.0 -- mesmo "
+    assert pd.isna(r.loc["VALE3", "score_reversao"]), (
+        "sem serie de preco, o score era preenchido com 50.0 -- mesmo "
         "problema do fillna(median), numero inventado passando por medida"
     )
+
+
+# --------------------------------------------------------------------------
+# 15. P1-3: janela explicita e flag de dados insuficientes
+# --------------------------------------------------------------------------
+def serie(ticker, precos, ajustados=None, inicio=1):
+    """Serie diaria com datas crescentes; `ajustados` default = os mesmos."""
+    ajustados = ajustados if ajustados is not None else precos
+    linhas = []
+    for passo, (cru, ajustado) in enumerate(zip(precos, ajustados)):
+        dia = inicio + passo
+        linhas.append({
+            "ticker": ticker,
+            "data": f"2026-{1 + dia // 28:02d}-{1 + dia % 28:02d}",
+            "fechamento": cru,
+            "fechamento_ajustado": ajustado,
+        })
+    return pd.DataFrame(linhas)
+
+
+def teste_15_menos_que_o_minimo_devolve_neutro_com_flag():
+    # ACEITE DO P1-3: com menos de 60 observacoes, retorna 50 com flag
+    r = calcular_score_reversao(serie("PETR4", [10.0 + i for i in range(59)]))
+
+    assert r.loc["PETR4", "score_reversao"] == 50.0, (
+        "com 59 pregoes o range nao descreve distribuicao nenhuma; a nota tem "
+        "que ser neutra, nao um numero que parece medida"
+    )
+    assert bool(r.loc["PETR4", "dados_insuficientes"]) is True
+    assert r.loc["PETR4", "observacoes"] == 59
+
+
+def teste_16_no_minimo_exato_ja_calcula():
+    # 60 pregoes subindo: o ultimo preco e a maxima, logo reversao = 0
+    r = calcular_score_reversao(serie("PETR4", [10.0 + i for i in range(60)]))
+
+    assert bool(r.loc["PETR4", "dados_insuficientes"]) is False
+    assert abs(r.loc["PETR4", "score_reversao"] - 0.0) < 1e-9, (
+        "subindo sem parar, o preco atual e a maxima: nao caiu nada"
+    )
+
+
+def teste_17_janela_corta_os_pregoes_mais_antigos():
+    # uma maxima gigante bem no comeco, fora da janela de 252
+    precos = [999.0] + [10.0] * JANELA_REVERSAO + [10.0]
+    r = calcular_score_reversao(serie("PETR4", precos))
+
+    assert r.loc["PETR4", "observacoes"] == JANELA_REVERSAO, (
+        f"deveria usar so os ultimos {JANELA_REVERSAO} pregoes"
+    )
+    assert r.loc["PETR4", "score_reversao"] == 50.0, (
+        "o pico de 999 ficou fora da janela; dentro dela o preco nao se moveu"
+    )
+
+
+def teste_18_usa_o_ajustado_e_nao_o_fechamento_cru():
+    # o cru desaba por causa de um provento; o ajustado nao se move
+    cru = [20.0] * 40 + [10.0] * 30
+    ajustado = [10.0] * 70
+    r = calcular_score_reversao(serie("PETR4", cru, ajustados=ajustado))
+
+    assert r.loc["PETR4", "score_reversao"] == 50.0, (
+        "leu o fechamento cru: no dia do provento o preco cai sem a empresa "
+        "ter piorado, e isso viraria 'caiu muito'"
+    )
+    assert r.loc["PETR4", "preco_atual"] == 10.0, (
+        "o preco EXIBIDO continua sendo o cru, que e o que aparece na tela"
+    )
+
+
+def teste_19_na_minima_tira_cem_e_na_maxima_tira_zero():
+    caindo = calcular_score_reversao(serie("PETR4", [100.0 - i for i in range(70)]))
+    subindo = calcular_score_reversao(serie("VALE3", [10.0 + i for i in range(70)]))
+
+    assert abs(caindo.loc["PETR4", "score_reversao"] - 100.0) < 1e-9
+    assert abs(subindo.loc["VALE3", "score_reversao"] - 0.0) < 1e-9
+
+
+def teste_20_preco_parado_vira_neutro_sem_flag():
+    r = calcular_score_reversao(serie("PETR4", [10.0] * 70))
+
+    assert r.loc["PETR4", "score_reversao"] == 50.0
+    assert bool(r.loc["PETR4", "dados_insuficientes"]) is False, (
+        "ter dado e o dado nao variar sao coisas diferentes"
+    )
+
+
+def teste_21_janela_completa_so_com_252_pregoes():
+    curta = calcular_score_reversao(serie("PETR4", [10.0 + i for i in range(63)]))
+    cheia = calcular_score_reversao(serie("VALE3", [10.0 + i for i in range(JANELA_REVERSAO)]))
+
+    assert bool(curta.loc["PETR4", "janela_completa"]) is False, (
+        "63 pregoes passam do minimo de 60, mas sao 25% da janela -- a flag "
+        "existe para isso nao passar por serie de um ano"
+    )
+    assert bool(cheia.loc["VALE3", "janela_completa"]) is True
+
+
+def teste_22_serie_vazia_nao_quebra():
+    vazio = pd.DataFrame(columns=["ticker", "data", "fechamento", "fechamento_ajustado"])
+    assert calcular_score_reversao(vazio).empty
+
+
+def teste_23_minimo_e_janela_sao_os_do_prd():
+    assert JANELA_REVERSAO == 252, "252 pregoes = um ano de bolsa (PRD RF-05)"
+    assert MINIMO_OBSERVACOES == 60
 
 
 if __name__ == "__main__":
@@ -236,3 +356,19 @@ if __name__ == "__main__":
     print(exemplo[colunas].round(1).to_string())
     print("\nNaN em categoria = nenhum indicador aplicavel com dado; o peso dela")
     print("e redistribuido. Note que BBAS3 e BBSE3 tem 6 aplicaveis, nao 11.")
+
+    print("\n\nTabela de conferencia manual -- score de reversao por tamanho de janela.")
+    print("Serie sempre caindo de forma constante, so mudando quantos pregoes existem:\n")
+    print(f"{'pregoes':>8s} {'nota':>7s} {'insuf?':>8s} {'cheia?':>8s}  comentario")
+    for pregoes, comentario in [(20, "interruptor puro, sem significado"),
+                                (59, "um abaixo do minimo"),
+                                (60, "minimo exato, ja calcula"),
+                                (63, "o que temos hoje: 25% da janela"),
+                                (JANELA_REVERSAO, "um ano de bolsa")]:
+        linha = calcular_score_reversao(serie("X", [100.0 - i * 0.1 for i in range(pregoes)]))
+        print(f"{pregoes:8d} {linha.loc['X', 'score_reversao']:7.1f} "
+              f"{str(bool(linha.loc['X', 'dados_insuficientes'])):>8s} "
+              f"{str(bool(linha.loc['X', 'janela_completa'])):>8s}  {comentario}")
+
+    print("\nNos tres casos de cima a serie cai igual, e a nota e a mesma 100.")
+    print("O que muda e quanta confianca ela merece -- por isso as duas flags.")

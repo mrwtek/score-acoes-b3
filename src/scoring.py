@@ -197,25 +197,79 @@ def calcular_score_fundamentalista(fundamentos):
     return scores_categoria.sort_values("score_fundamentalista", ascending=False)
 
 
-def calcular_score_preco(cotacoes):
-    """`cotacoes`: colunas ticker e preco, uma linha por coleta.
+# Janela do score de reversao, em pregoes. 252 e um ano de bolsa -- a mesma
+# janela da "maxima e minima de 52 semanas" que o mercado usa.
+JANELA_REVERSAO = 252
 
-    A ordem das linhas importa: o "preco atual" sai de um agg("last"), entao e
-    a ultima linha que o chamador entregou, nao a mais recente por data. Quem
-    carrega e responsavel por manter a ordem de insercao.
+# Abaixo disso o range nao descreve distribuicao nenhuma: com 20 pregoes, o
+# ultimo preco e quase sempre a maxima ou a minima, e o score vira interruptor
+# de 0 ou 100 em vez de escala.
+MINIMO_OBSERVACOES = 60
+
+# Nota devolvida quando nao ha observacoes suficientes. Neutra de proposito:
+# "nao sei" nao e nem bom nem ruim, e vem acompanhada da flag.
+NOTA_SEM_DADOS = 50.0
+
+
+def calcular_score_reversao(precos):
+    """Posicao do preco dentro da janela, invertida. Era `calcular_score_preco`.
+
+    `precos`: colunas ticker, data e fechamento_ajustado, uma linha por pregao.
+
+    MEDE QUEDA, NAO BARATEAMENTO. Uma acao pode cair 40% e ficar mais cara, se
+    o lucro caiu 60%. E uma aposta contraria deliberada, e a literatura de
+    fatores (Asness, Moskowitz, Pedersen) aponta na direcao oposta -- valor com
+    momentum positivo tende a funcionar melhor que comprar o que esta caindo.
+    Mantido como fator informativo, com o trade-off explicito. Nunca descreva
+    esta coluna como valuation.
+
+    Usa fechamento AJUSTADO: no dia do provento o preco cai sem que a empresa
+    tenha piorado, e o fechamento cru leria isso como queda.
+
+    Devolve, por ticker: preco_atual (fechamento cru, que e o que aparece na
+    tela), score_reversao, observacoes e a flag dados_insuficientes.
     """
-    agrupado = cotacoes.groupby("ticker")["preco"].agg(["min", "max", "last"])
-    agrupado.columns = ["preco_min", "preco_max", "preco_atual"]
+    colunas = ["preco_atual", "score_reversao", "observacoes",
+               "dados_insuficientes", "janela_completa"]
+    if precos.empty:
+        return pd.DataFrame(columns=colunas)
 
-    posicao_no_range = (agrupado["preco_atual"] - agrupado["preco_min"]) / (agrupado["preco_max"] - agrupado["preco_min"])
-    posicao_no_range = posicao_no_range.fillna(0.5)
+    linhas = {}
+    for ticker, grupo in precos.groupby("ticker"):
+        janela = grupo.sort_values("data").tail(JANELA_REVERSAO)
+        serie = janela["fechamento_ajustado"].dropna()
+        observacoes = len(serie)
 
-    agrupado["score_preco"] = (1 - posicao_no_range) * 100
-    return agrupado[["preco_atual", "score_preco"]]
+        preco_atual = (janela["fechamento"].dropna().iloc[-1]
+                       if "fechamento" in janela.columns and janela["fechamento"].notna().any()
+                       else (serie.iloc[-1] if observacoes else np.nan))
+
+        if observacoes < MINIMO_OBSERVACOES:
+            nota = NOTA_SEM_DADOS
+            insuficiente = True
+        else:
+            minimo, maximo = serie.min(), serie.max()
+            if maximo == minimo:
+                # preco parado na janela inteira: nao caiu nem subiu
+                nota = NOTA_SEM_DADOS
+            else:
+                posicao = (serie.iloc[-1] - minimo) / (maximo - minimo)
+                nota = (1 - posicao) * 100
+            insuficiente = False
+
+        linhas[ticker] = {
+            "preco_atual": preco_atual,
+            "score_reversao": nota,
+            "observacoes": observacoes,
+            "dados_insuficientes": insuficiente,
+            "janela_completa": observacoes >= JANELA_REVERSAO,
+        }
+
+    return pd.DataFrame.from_dict(linhas, orient="index")[colunas]
 
 
-def calcular_ranking(fundamentos, cotacoes):
-    """Junta score fundamentalista e score de preco, lado a lado.
+def calcular_ranking(fundamentos, precos):
+    """Junta score fundamentalista e score de reversao, lado a lado.
 
     NAO existe mais score_geral (P1-13). Ele era
     0,6*fundamentalista + 0,4*preco e nao era consumido por nada: as regras de
@@ -227,11 +281,11 @@ def calcular_ranking(fundamentos, cotacoes):
     final era alguma forma de "esta barato" -- um vies de valor muito mais
     agressivo do que o desenho aparentava. Ver DECISOES.md.
 
-    Ordena por score_fundamentalista. O score de preco fica ao lado, para ser
-    lido junto e nao somado.
+    Ordena por score_fundamentalista. O score de reversao fica ao lado, para
+    ser lido junto e nao somado -- um diz "empresa boa", o outro diz "caiu".
     """
     fundamentalista = calcular_score_fundamentalista(fundamentos)
-    preco = calcular_score_preco(cotacoes)
+    reversao = calcular_score_reversao(precos)
 
-    combinado = fundamentalista.join(preco, how="left")
+    combinado = fundamentalista.join(reversao, how="left")
     return combinado.sort_values("score_fundamentalista", ascending=False)

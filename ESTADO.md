@@ -69,6 +69,13 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       indicador sai do cálculo com o peso redistribuído, em vez de virar 0.
       Divergi da 7A.6 em um ponto: inaplicável é tratado como ausente, não com
       nota neutra. Justificado no DECISOES.md e fácil de reverter.
+- [x] **P1-3** `score_reversao` (antigo `score_preco`) agora lê
+      `cotacoes_historicas` pelo fechamento ajustado, janela de 252 pregões,
+      mínimo de 60. Aceite cumprido: abaixo de 60 devolve 50 com flag.
+      **O sistema passou a enxergar a queda de 26/10** — antes mostrava BBAS3
+      a R$ 22,20 (preço de 14/09) com nota 30,8; agora R$ 17,47 e nota 100,0.
+      Ressalva: com 63 de 252 pregões a nota ainda é frágil; o ranking mostra
+      a razão `63/252` para isso ficar visível.
 - [x] **Diário de teses** (tarefa nova, fora do PRD) — tabela `teses` e
       `src/teses.py`. Registra premissa, prazo e critério ANTES, e confere
       contra IBOV e CDI depois. Primeiras duas teses abertas em 26/10/2026
@@ -140,11 +147,9 @@ escala que será trocada.
       *Aceite:* o pior colocado deixa de tirar exatamente 0.0.
 - [ ] **P1-14** flag `premio_negativo` quando earnings yield < Selic
 
-### Universo e reversão
+### Universo
 - [ ] **P1-8** ampliar whitelist para 20–30 tickers
-- [ ] **P1-3** janela explícita (252 pregões) + flag "dados insuficientes";
-      renomear `score_preco` para `score_reversao`
-      *Aceite:* com menos de 60 observações, retorna 50 com flag.
+
       **Bloqueado parcialmente:** o plano free da brapi entrega 3 meses (63
       pregões), não 252. A janela cheia só existe depois de uns 9 meses
       rodando `backfill_historico.py` periodicamente. Dá para implementar a
