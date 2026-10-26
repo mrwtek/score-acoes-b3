@@ -177,10 +177,19 @@ def teste_09_contrato_da_categoria():
     derivado = adicionar_metricas_valuation(montar({"A": (10.0, 2.0)}))
     assert "pl" in derivado.columns and "pvp" in derivado.columns
 
-    # normalizar() nao foi tocada: escala 0-100 e fillna(median)
+    # normalizar() continua min-max 0-100...
     serie = pd.Series([1.0, 2.0, 3.0], index=["a", "b", "c"])
     assert list(normalizar(serie, True)) == [0.0, 50.0, 100.0]
-    assert normalizar(pd.Series([1.0, np.nan, 3.0]), True)[1] == 50.0
+
+    # ...mas o P1-13 tirou o fillna(median): ausente continua ausente, em vez
+    # de virar nota media em silencio
+    com_buraco = normalizar(pd.Series([1.0, np.nan, 3.0]), True)
+    assert pd.isna(com_buraco[1]), (
+        "dado ausente virou nota -- era o fillna(median) que o P1-13 removeu"
+    )
+    assert list(com_buraco[[0, 2]]) == [0.0, 100.0], (
+        "o ausente nao pode mais influenciar a escala dos presentes"
+    )
 
 
 # --------------------------------------------------------------------------
@@ -189,8 +198,15 @@ def teste_09_contrato_da_categoria():
 def teste_10_ranking_mostra_colunas_de_conferencia():
     ranking = ranking_atual()
 
-    for coluna in ["pl", "pvp", "earnings_yield", "book_to_market", "score_geral"]:
+    for coluna in ["pl", "pvp", "earnings_yield", "book_to_market",
+                   "score_fundamentalista", "indicadores_usados",
+                   "indicadores_aplicaveis"]:
         assert coluna in ranking.columns, f"coluna {coluna} faltando no ranking"
+
+    assert "score_geral" not in ranking.columns, (
+        "score_geral voltou. Ele foi removido no P1-13: misturava 'empresa boa' "
+        "com 'caiu recentemente' num numero unico. Ver DECISOES.md"
+    )
 
     # o yield exibido tem que bater com 1/pl na mao, onde o P/L e plausivel
     plausivel = ranking[(ranking["pl"] > 1 / LIMITE_YIELD) & ranking["pl"].notna()]

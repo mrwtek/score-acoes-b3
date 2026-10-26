@@ -56,6 +56,19 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       o bloco P1-11→P1-2 poder ser testado com dados sintéticos. `analise.py`
       ficou com os carregadores e ganhou `ranking_atual()`. Ranking conferido
       byte a byte contra o baseline: **idêntico**.
+- [x] **Sanidade dos indicadores** (tarefa nova, fora do PRD) — `validacao.py`
+      recusa o impossível (margem acima de 100%, CAGR abaixo de −100%) e avisa
+      sobre incoerência entre indicadores, sem remover. Único descarte nos
+      dados atuais: margem líquida de 212% da ITSA4. Efeito grande, porque com
+      min-max esse valor ancorava a escala de rentabilidade de todo mundo.
+- [x] **P1-12** `setores.py` com setor por ticker; financeiras não pontuam ROA,
+      margens nem dívida/PL. **BBAS3 deixou de tirar 0.0 em segurança** (aceite
+      cumprido) e ITUB4 deixou de tirar 100.0 pela mesma razão invertida.
+- [x] **P1-13** `score_geral` removido, `fillna(median)` removido, cobertura
+      exposta (`indicadores_usados` de `indicadores_aplicaveis`). Categoria sem
+      indicador sai do cálculo com o peso redistribuído, em vez de virar 0.
+      Divergi da 7A.6 em um ponto: inaplicável é tratado como ausente, não com
+      nota neutra. Justificado no DECISOES.md e fácil de reverter.
 - [x] **BUG-01** `carregar_fundamentos_mais_recentes()` ordenava por `MAX(data)`
       textual (`dd/mm/aaaa`), então `31/08/2026` saía maior que `14/09/2026` e
       o ranking rodava sobre o fundamento mais antigo do banco. Trocado por
@@ -83,8 +96,8 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] nada — próxima é **P1-11** (faixas absolutas para rentabilidade,
-      margens, crescimento e segurança)
+- [ ] nada — próxima é **P1-11** (faixas absolutas). Virou prioridade real:
+      ver o aviso sobre a coluna segurança logo abaixo
 
 ---
 
@@ -97,17 +110,26 @@ Todo o bloco de score vem **antes** do P1-4, para não gravar snapshots numa
 escala que será trocada.
 
 ### Bloco de score (o miolo da revisão)
-- [ ] **P1-11** faixas absolutas para rentabilidade, margens, crescimento e
-      segurança (substitui min-max) — PRD §7A.3 a §7A.6
+- [ ] **P1-11** faixas absolutas — **agora é urgente, não só desejável.** Com
+      as financeiras fora de dívida/PL, segurança ficou com 1 indicador e 5
+      papéis, e o min-max virou artefato puro (FIQE3 em 0,0 e WEGE3 em 100,0).
+      Até o P1-11 entrar, **não use a coluna segurança para decidir nada.**
+      Ver DECISOES.md.
+      *Escopo (PRD §7A.3 a §7A.6):* faixas absolutas no lugar do min-max,
+      separar margens de rentabilidade, dropar `margem_bruta` do score, cap de
+      30% no CAGR de lucro.
       *Aceite:* mudar a whitelist não altera a nota de um ticker que não mudou.
-      Inclui: separar margens de rentabilidade, dropar `margem_bruta` do score,
-      cap de 30% no CAGR de lucro e descarte se ano-base ≤ 0.
-- [ ] **P1-12** flag de setor por ticker; não pontuar dívida/PL, ROA e margens
-      para financeiras (nota neutra + `nao_aplicavel`, nunca 0)
-      *Aceite:* BBAS3 deixa de tirar 0.0 em segurança.
-- [ ] **P1-13** remover `score_geral`; parar de imputar mediana em dado
-      faltante e expor cobertura de indicadores
-      *Aceite:* ranking mostra "7 de 11 indicadores" quando faltar dado.
+      *Dois ajustes decididos na revisão de 26/10, antes de implementar:*
+      1. **Interpolar** entre as âncoras em vez de degraus. ROE 15%=80 e
+         ROE 20%=100 continuam valendo, mas ROE 17,5% vira 90 em vez de 80.
+         Com degraus, 2,4 p.p. de CAGR valem 10 pontos de score e a mesma
+         variação no meio da faixa vale 0 — ruim justamente para o O1, que é
+         acompanhar a empresa no tempo.
+      2. A regra "descartar CAGR de lucro se o ano-base for ≤ 0" **não é
+         implementável**: a BolsAI devolve o CAGR pronto, sem o lucro do
+         ano-base. Dá para aplicar o cap de 30%, não o descarte. A PETR4 com
+         CAGR de 77,68% vai ser capada e receber nota máxima para um número
+         que é quase certamente artefato de base deprimida.
 - [ ] **P1-2** winsorização (p5/p95) + z-score no valuation
       *Aceite:* o pior colocado deixa de tirar exatamente 0.0.
 - [ ] **P1-14** flag `premio_negativo` quando earnings yield < Selic

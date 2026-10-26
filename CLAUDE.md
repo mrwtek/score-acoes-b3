@@ -35,6 +35,10 @@ trade-off antes de decidir por mim.
       gerenciar_posicoes.py   CLI de carteira (buy/sell/show)
       scoring.py              as fórmulas do score. NÃO lê o banco: recebe
                               DataFrames e devolve DataFrames
+      validacao.py            recusa indicador impossível (vira ausente, nunca
+                              nota); avisa incoerência sem remover
+      setores.py              setor por ticker e quais indicadores não se
+                              aplicam a cada setor. Só responde, não pontua
       analise.py              carregadores do banco + `ranking_atual()` +
                               impressão do ranking. Sabe de SQLite, não de
                               fórmula
@@ -157,13 +161,24 @@ universo. Isso é o que torna os snapshots comparáveis ao longo do tempo.
 - Valuation usa **earnings yield (1/pl)** e **book-to-market (1/pvp)**, ambos
   "maior é melhor" — nunca P/L e P/VP diretos, que pontuam prejuízo como
   "barato".
-- `score_geral` **não existe mais**. Ficam duas colunas independentes:
-  `score_fundamentalista` e `score_reversao`.
+- `score_geral` **não existe mais** (removido no P1-13). Ficam duas colunas
+  independentes: `score_fundamentalista` e `score_reversao`, lidas lado a lado
+  e nunca somadas.
 - `score_reversao` (antigo `score_preco`) mede **queda de preço, não
   barateamento**. É uma aposta contrária deliberada. Nunca descreva como
   valuation.
-- Financeiras não pontuam dívida/PL, ROA nem margens: nota neutra com flag
-  `nao_aplicavel`, nunca 0.
+- Financeiras não pontuam dívida/PL, ROA nem margens (`setores.py`). O
+  indicador inaplicável é tratado como ausente — sai do cálculo e o peso é
+  redistribuído — e não com nota neutra como diz a 7A.6. Divergência
+  deliberada, justificada no DECISOES.md de 26/10.
+- **Dado ausente não vira nota.** `normalizar()` não imputa mais mediana, e o
+  ranking expõe cobertura (`indicadores_usados` de `indicadores_aplicaveis`).
+  Categoria sem indicador sai como ausente, nunca como 0 — 0 diz "ruim"
+  quando a verdade é "não dá para saber".
+- Antes de pontuar, os indicadores passam por `validacao.py`: o que é
+  impossível (margem acima de 100%, CAGR abaixo de −100%) vira ausente. Faixa
+  absoluta transforma número absurdo em nota confiante, então o filtro vem
+  antes.
 - Escala sempre 0–100. Faixas ancoradas ao custo de capital brasileiro
   (Selic/inflação em `config_scoring`), não copiadas de tabela americana.
 

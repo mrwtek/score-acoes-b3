@@ -21,6 +21,8 @@ O P1-1 so moveu o codigo de lugar, sem mudar uma conta.
 import numpy as np
 import pandas as pd
 
+import setores
+
 CATEGORIAS_FUNDAMENTALISTAS = {
     "valuation": {"earnings_yield": True, "book_to_market": True},
     "rentabilidade": {"roe": True, "roa": True, "roic": True, "margem_liquida": True, "margem_bruta": True, "margem_ebitda": True},
@@ -56,8 +58,8 @@ METRICAS_VALUATION = (
 # Colunas cruas e derivadas que o ranking mostra para conferencia manual.
 COLUNAS_VALUATION_EXIBICAO = ["pl", "pvp", "earnings_yield", "book_to_market"]
 
-PESO_FUNDAMENTALISTA = 0.6
-PESO_PRECO = 0.4
+# PESO_FUNDAMENTALISTA e PESO_PRECO sairam junto com o score_geral (P1-13).
+# Os dois scores agora sao lidos lado a lado, nunca somados.
 
 
 def adicionar_metricas_valuation(df):
@@ -84,18 +86,79 @@ def adicionar_metricas_valuation(df):
 
 
 def normalizar(valor, maior_melhor):
-    valor = valor.fillna(valor.median())
+    """Min-max 0-100. Dado ausente continua ausente (P1-13).
+
+    Antes isto fazia fillna(valor.median()): quem nao tinha o indicador
+    recebia nota media em silencio, e nada no ranking indicava a diferenca
+    entre "mediano" e "nao sabemos". Agora o ausente nao pontua e some da
+    conta da categoria, e a cobertura aparece no ranking.
+
+    O min e o max tambem passam a ignorar o ausente, entao um indicador
+    faltante deixa de influenciar a escala dos outros.
+    """
     minimo, maximo = valor.min(), valor.max()
-    if maximo == minimo:
-        return pd.Series(50.0, index=valor.index)
+    if pd.isna(minimo) or minimo == maximo:
+        # serie toda ausente, ou todos iguais: nota neutra para quem tem
+        # valor, ausente para quem nao tem
+        return pd.Series(
+            [np.nan if pd.isna(v) else 50.0 for v in valor], index=valor.index
+        )
+
     normalizado = (valor - minimo) / (maximo - minimo) * 100
     return normalizado if maior_melhor else 100 - normalizado
 
 
+def _mascarar_nao_aplicaveis(df):
+    """Transforma em ausente o indicador que nao se aplica ao setor (P1-12).
+
+    Acontece ANTES de normalizar, de proposito: um valor inaplicavel nao pode
+    nem virar nota nem ancorar a escala dos outros. A divida/PL de 5,13 do
+    BBAS3 e alavancagem normal de banco, nao defeito -- mas, deixada na
+    coluna, ela estica o min-max e muda a nota de seguranca de todo mundo.
+
+    Nota sobre a 7A.6: o PRD pede "nota NEUTRA + flag nao_aplicavel" para
+    financeiras. Aqui o inaplicavel e tratado como o ausente -- nao pontua e
+    sai da conta -- em vez de receber 50. Nota neutra continua sendo um numero
+    inventado, que puxa todo banco para o meio da escala; e a 7A.8 ja define
+    exatamente este mecanismo para o dado faltante. Um mecanismo so, e a
+    coluna de cobertura mostra a diferenca. Ver DECISOES.md.
+    """
+    df = df.copy()
+    for ticker in df.index:
+        for indicador in setores.indicadores_nao_aplicaveis(ticker):
+            if indicador in df.columns:
+                df.at[ticker, indicador] = np.nan
+    return df
+
+
+def _contar_aplicaveis(df):
+    """Quantos indicadores do score se aplicam a cada ticker."""
+    contagem = pd.Series(0, index=df.index, dtype=int)
+    for indicadores in CATEGORIAS_FUNDAMENTALISTAS.values():
+        for indicador in indicadores:
+            if indicador not in df.columns:
+                continue
+            for ticker in df.index:
+                if not setores.nao_se_aplica(ticker, indicador):
+                    contagem[ticker] += 1
+    return contagem
+
+
 def calcular_score_fundamentalista(fundamentos):
-    """`fundamentos`: um registro por ticker, indexado por ticker."""
+    """`fundamentos`: um registro por ticker, indexado por ticker.
+
+    Devolve as notas por categoria, o score_fundamentalista e a cobertura
+    (`indicadores_usados` de `indicadores_aplicaveis`). Categoria sem nenhum
+    indicador disponivel sai como ausente e tem o peso redistribuido entre as
+    que sobraram -- nao vira zero, que seria dizer "ruim" quando a verdade e
+    "nao da para saber".
+    """
     df = adicionar_metricas_valuation(fundamentos)
+    aplicaveis = _contar_aplicaveis(df)
+    df = _mascarar_nao_aplicaveis(df)
+
     scores_categoria = pd.DataFrame(index=df.index)
+    colunas_de_indicador = []
 
     for categoria, indicadores in CATEGORIAS_FUNDAMENTALISTAS.items():
         colunas_score = []
@@ -105,12 +168,28 @@ def calcular_score_fundamentalista(fundamentos):
             col_score = f"score_{indicador}"
             df[col_score] = normalizar(df[indicador], maior_melhor)
             colunas_score.append(col_score)
-        scores_categoria[categoria] = df[colunas_score].mean(axis=1)
 
-    scores_categoria["score_fundamentalista"] = sum(
-        scores_categoria[categoria] * peso
-        for categoria, peso in PESOS_CATEGORIA.items()
+        colunas_de_indicador.extend(colunas_score)
+        # mean(axis=1) ignora ausente; categoria sem nada vira ausente
+        scores_categoria[categoria] = df[colunas_score].mean(axis=1) if colunas_score else np.nan
+
+    categorias = list(CATEGORIAS_FUNDAMENTALISTAS)
+    notas = scores_categoria[categorias]
+
+    # peso redistribuido sobre as categorias que esse ticker tem
+    pesos = pd.DataFrame(
+        {categoria: PESOS_CATEGORIA[categoria] for categoria in categorias},
+        index=df.index,
+    ).where(notas.notna())
+
+    soma_pesos = pesos.sum(axis=1)
+    scores_categoria["score_fundamentalista"] = (
+        (notas * pesos).sum(axis=1) / soma_pesos.replace(0, np.nan)
     )
+
+    scores_categoria["indicadores_usados"] = df[colunas_de_indicador].notna().sum(axis=1)
+    scores_categoria["indicadores_aplicaveis"] = aplicaveis
+    scores_categoria["categorias_usadas"] = notas.notna().sum(axis=1)
 
     for coluna in COLUNAS_VALUATION_EXIBICAO:
         scores_categoria[coluna] = df[coluna]
@@ -135,16 +214,24 @@ def calcular_score_preco(cotacoes):
     return agrupado[["preco_atual", "score_preco"]]
 
 
-def calcular_score_geral(fundamentos, cotacoes):
+def calcular_ranking(fundamentos, cotacoes):
+    """Junta score fundamentalista e score de preco, lado a lado.
+
+    NAO existe mais score_geral (P1-13). Ele era
+    0,6*fundamentalista + 0,4*preco e nao era consumido por nada: as regras de
+    sinal (RF-07) ja usavam os dois separados. O composto so misturava "empresa
+    boa" com "caiu recentemente" num numero unico que esconde qual dos dois
+    esta falando.
+
+    Descoberto ao revisar: 0,6 x 25% (valuation) + 40% (preco) = 55% do score
+    final era alguma forma de "esta barato" -- um vies de valor muito mais
+    agressivo do que o desenho aparentava. Ver DECISOES.md.
+
+    Ordena por score_fundamentalista. O score de preco fica ao lado, para ser
+    lido junto e nao somado.
+    """
     fundamentalista = calcular_score_fundamentalista(fundamentos)
     preco = calcular_score_preco(cotacoes)
 
     combinado = fundamentalista.join(preco, how="left")
-    combinado["score_preco"] = combinado["score_preco"].fillna(50.0)
-
-    combinado["score_geral"] = (
-        combinado["score_fundamentalista"] * PESO_FUNDAMENTALISTA +
-        combinado["score_preco"] * PESO_PRECO
-    )
-
-    return combinado.sort_values("score_geral", ascending=False)
+    return combinado.sort_values("score_fundamentalista", ascending=False)

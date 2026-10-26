@@ -128,6 +128,14 @@ horário de coleta.
 existe só para lembrar que feriados não são considerados (limitação
 conhecida, não bug).
 
+### `python test_validacao.py`, `test_setores.py`, `test_scoring.py`
+**O que fazem:** cobrem a camada de sanidade dos indicadores, o mapa de setor
+e o cálculo do score (dado ausente, cobertura, peso redistribuído).
+**Quando rodar:** depois de qualquer mudança em `validacao.py`, `setores.py`
+ou `scoring.py` — ou seja, em toda tarefa do bloco de score.
+**Comportamento esperado:** 15/15, 12/12 e 14/14, cada um terminando numa
+tabela de conferência manual. Nenhum toca o banco nem a API.
+
 ### `python test_analise.py`
 **O que faz:** confirma que os carregadores do `analise.py` leem a linha
 certa — principalmente que o fundamento escolhido é o mais recente de

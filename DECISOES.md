@@ -9,6 +9,56 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 26/10/2026 — Inaplicável é tratado como ausente, não como nota neutra
+
+**Decisão:** no P1-12/P1-13, indicador que não se aplica ao setor sai do
+cálculo e tem o peso redistribuído — o mesmo tratamento do dado faltante.
+**Isto diverge da 7A.6 do PRD**, que pede "nota NEUTRA + flag `nao_aplicavel`".
+
+**Por quê:** nota neutra continua sendo número inventado. Com 50 em segurança,
+todo banco é puxado para o meio da escala por uma medida que ninguém fez — e
+20% do score passa a ser preenchimento. A 7A.8 já define o mecanismo certo
+("não pontuar, recalcular o peso sobre os disponíveis") para o dado ausente;
+usar dois mecanismos para o mesmo problema só dobra o que precisa ser mantido.
+
+A decisão original de 03/09 (nota neutra, nunca 0) nasceu do BBAS3 tirando 0,0
+em segurança contra ITUB4 com 100. Excluir resolve isso igualmente bem — e sem
+inventar o 50.
+
+**O que preserva a comparabilidade:** as colunas `indicadores_usados`,
+`indicadores_aplicaveis` e `categorias_usadas`. O score de um banco é média de
+3 categorias e o da PETR4 de 5; isso agora está escrito na tabela em vez de
+escondido. Se o número incomodar, é porque a informação por trás dele é mesmo
+mais fina — e era isso que a nota neutra mascarava.
+
+**Fácil de reverter** se preferir a letra do PRD: basta `_mascarar_nao_aplicaveis`
+gravar 50 em vez de NaN.
+
+---
+
+## 26/10/2026 — Efeito colateral de ordenar P1-12/P1-13 antes do P1-11
+
+**Registro, não decisão.** Tirar as financeiras do cálculo de dívida/PL deixou
+a categoria segurança com **um indicador e cinco papéis**. Com min-max, isso
+piorou o artefato que o P1-2 existe para corrigir: FIQE3 tira exatamente 0,0 e
+WEGE3 exatamente 100,0, e a PETR4 desabou de 85,2 para 16,9 sem a empresa ter
+mudado nada.
+
+O número anterior era ruído (as financeiras alongavam a escala e faziam todo
+mundo parecer seguro). O novo é artefato de amostra pequena. Nenhum dos dois é
+medida.
+
+**Isso é transitório e esperado:** o P1-11 troca min-max por faixa absoluta e
+o problema desaparece — dívida/PL de 0,76 vira nota pela régua, não pela
+companhia. Mas enquanto o P1-11 não chegar, **não use a coluna segurança para
+decidir nada.**
+
+Foi o preço de inverter a ordem. Valeu, porque o P1-11 agora entra num terreno
+que já sabe o que é inaplicável e o que é ausente — mas o preço existe e está
+aqui registrado.
+
+---
+
 ## 26/10/2026 — BUG-01: o ranking rodava sobre o fundamento mais antigo
 
 **O que era:** `carregar_fundamentos_mais_recentes()` escolhia a linha com

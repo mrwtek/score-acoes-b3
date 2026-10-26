@@ -13,6 +13,7 @@ import sqlite3
 import pandas as pd
 
 import scoring
+import setores
 import validacao
 from paths import CAMINHO_BANCO
 
@@ -92,7 +93,7 @@ def fundamentos_validados():
 def ranking_atual():
     """Carrega, valida e devolve o ranking completo."""
     fundamentos, _ = fundamentos_validados()
-    return scoring.calcular_score_geral(fundamentos, carregar_precos_para_score())
+    return scoring.calcular_ranking(fundamentos, carregar_precos_para_score())
 
 
 if __name__ == "__main__":
@@ -108,11 +109,30 @@ if __name__ == "__main__":
     validados, relatorio = fundamentos_validados()
     validacao.imprimir_relatorio(relatorio)
 
-    print("\nRanking geral (fundamentalista + preco):\n")
-    ranking = scoring.calcular_score_geral(validados, carregar_precos_para_score())
+    sem_setor = setores.tickers_sem_setor(validados.index)
+    if sem_setor:
+        print(f"\nSem setor no mapa (pontuam tudo): {', '.join(sem_setor)}")
+        print("Acrescente em src/setores.py para as regras de setor valerem.")
+
+    print("\nRanking fundamentalista:\n")
+    ranking = scoring.calcular_ranking(validados, carregar_precos_para_score())
 
     # scores em 1 casa; yields em 4, senao 0,0823 apareceria como 0,1
     ranking_exibicao = ranking.round(1)
     colunas_derivadas = ["earnings_yield", "book_to_market"]
     ranking_exibicao[colunas_derivadas] = ranking[colunas_derivadas].round(4)
+
+    # a cobertura vira uma coluna so, legivel: "7 de 11"
+    ranking_exibicao["cobertura"] = [
+        f"{int(usados)} de {int(aplicaveis)}"
+        for usados, aplicaveis in zip(ranking["indicadores_usados"],
+                                      ranking["indicadores_aplicaveis"])
+    ]
+    ranking_exibicao = ranking_exibicao.drop(
+        columns=["indicadores_usados", "indicadores_aplicaveis"]
+    )
     print(ranking_exibicao.to_string())
+
+    print("\ncobertura = indicadores que pontuaram, de quantos se aplicam ao setor.")
+    print("Categoria vazia nao vira zero: sai do calculo e o peso e redistribuido.")
+    print("score_fundamentalista e score_preco sao lidos lado a lado, nunca somados.")
