@@ -1,6 +1,6 @@
 # Estado do projeto
 
-Atualizado em: 04/09/2026
+Atualizado em: 26/10/2026
 Referência de prioridade: seção 10 do PRD v1.2
 
 Atualize este arquivo ao fim de cada tarefa e commite junto. Ele é o que te
@@ -41,13 +41,29 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       token
 - [x] Limpeza da posição de teste TESTE3
 - [x] Revisão da metodologia de score (PRD v1.2, seção 7A + DECISOES.md)
+- [x] **P3-4** backfill de preços históricos — tabela `cotacoes_historicas`,
+      `buscar_historico()` em `coletor.py` e `backfill_historico.py`, com
+      `test_historico.py` (15 testes). Primeira carga: 819 linhas, 63 pregões
+      por ticker, 28/07 a 26/10/2026. **Puxado fora da ordem do backlog**, a
+      pedido, antes do P1-1.
+
+### Limpeza de 26/10/2026 (ao retomar o projeto)
+Três coisas estavam fora do lugar depois de ~7 semanas parado:
+- `ESTADO.md` no disco tinha regredido para a versão de 02/09; restaurado da
+  versão commitada.
+- `transacoes` estava vazia apesar do P0-1 constar como feito — provável
+  restore de backup anterior ao backfill. `backfill_transacoes.py` e
+  `migrar_datas_iso.py` rodados; 9 transações criadas.
+- `COMANDOS.MD` nunca tinha entrado no git (o commit 81c2e7d só alterou o
+  `CLAUDE.md`); agora versionado.
 
 ---
 
 ## Em andamento
 
-- [ ] nada — o P0 está fechado; próxima é **P1-1** (extrair score para
-      `src/scoring.py`)
+- [ ] nada — próxima é **P1-1** (extrair score para `src/scoring.py`), ou a
+      tarefa 2 do histórico (tabela `indices` com IBOV e Selic/CDI), que ficou
+      desenhada mas não implementada
 
 ---
 
@@ -82,6 +98,10 @@ escala que será trocada.
 - [ ] **P1-3** janela explícita (252 pregões) + flag "dados insuficientes";
       renomear `score_preco` para `score_reversao`
       *Aceite:* com menos de 60 observações, retorna 50 com flag.
+      **Bloqueado parcialmente:** o plano free da brapi entrega 3 meses (63
+      pregões), não 252. A janela cheia só existe depois de uns 9 meses
+      rodando `backfill_historico.py` periodicamente. Dá para implementar a
+      flag agora e deixar a janela de 252 valendo quando a série alcançar.
 
 ### Carteira, sinais e histórico
 - [ ] **P1-5** `carteira.py` — lucro absoluto, relativo, peso, resultado
@@ -125,6 +145,20 @@ Depois: P1-9, P1-10 e a faixa P2 (robustez).
   com "token não fornecido", verificar o plano antes de suspeitar do código.
 - **BolsAI**: cota diária limitada no plano free. Fundamentos são coletados uma
   vez por dia por ticker justamente por isso.
+- **brapi, histórico**: o plano `free` só aceita os ranges `1d, 5d, 1mo, 3mo`.
+  De `6mo` para cima exige o plano Pro (R$ 139,99/mês, valor informado pela
+  própria API na resposta 400). Logo o teto é 63 pregões por chamada, e a
+  janela desliza: em 26/10/2026 o alcance começava em 28/07/2026. **O que
+  passar da janela sem ter sido coletado é perda permanente neste plano** —
+  por isso `backfill_historico.py` precisa rodar de tempos em tempos.
+- **brapi, limite de requisições**: 20 por minuto, concorrência 1 (headers
+  `ratelimit-limit` e `x-brapi-concurrency-limit`). O backfill espaça as
+  chamadas em 3,5s por causa disso.
+- **IFIX não tem histórico**: `IFIX.SA` aparece em `/available`, mas com
+  `range=3mo` devolve um único ponto (a cotação do dia). Como metade da
+  carteira é FII, o benchmark deles fica provisoriamente torto — comparar FII
+  contra Ibovespa não é comparação justa. Fica registrado para a tarefa dos
+  índices.
 
 ---
 
@@ -133,6 +167,9 @@ Depois: P1-9, P1-10 e a faixa P2 (robustez).
 - Rodar coleta: `python src/main.py` → `checknow` força uma coleta
 - Registrar operações: `python src/gerenciar_posicoes.py`
 - Ver ranking: `python src/analise.py`
+- **Estender a série histórica: `cd src && python backfill_historico.py`.**
+  Rodar uma vez por mês. Leva ~45s, não duplica nada se rodar de novo, e é o
+  que impede a série de ficar presa nos 3 meses da janela da brapi.
 - Backup manual antes de mexer em schema (o automático tem throttle diário e
   pode já ter sido "gasto" hoje):
   `copy data\acoes.db data\acoes_backup_AAAAMMDD.db`

@@ -1,7 +1,13 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from paths import CAMINHO_BANCO, fazer_backup
+
+# Mesma constante que o main.py usa para a janela de pregao. Repetida aqui de
+# proposito para nao criar import de main.py no banco.py (main ja importa
+# banco); se um terceiro arquivo precisar dela, vale centralizar.
+FUSO_B3 = ZoneInfo("America/Sao_Paulo")
 
 
 def hoje():
@@ -71,6 +77,30 @@ def criar_tabelas():
         )
     """)
 
+    # Serie diaria de fechamento, vinda do historico da brapi. Fica separada de
+    # `cotacoes` de proposito: `cotacoes` e a serie de coleta, com varias linhas
+    # por dia e so o preco do momento; aqui e um ponto por pregao, com OHLC e
+    # fechamento ajustado. Misturar as duas estragaria as duas.
+    #
+    # `data` aqui e so ISO (YYYY-MM-DD). A convivencia de dois formatos de data
+    # existe no resto do banco porque ja_tem_fundamento_hoje() depende do
+    # formato brasileiro; tabela nova nao herda essa divida.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cotacoes_historicas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            data TEXT NOT NULL,
+            abertura REAL,
+            maxima REAL,
+            minima REAL,
+            fechamento REAL,
+            fechamento_ajustado REAL,
+            volume INTEGER,
+            coletado_em TEXT NOT NULL,
+            UNIQUE(ticker, data)
+        )
+    """)
+
     _adicionar_coluna_se_faltar(cursor, "cotacoes", "data_hora_iso", "TEXT")
     _adicionar_coluna_se_faltar(cursor, "fundamentos", "data_hora_iso", "TEXT")
     _adicionar_coluna_se_faltar(cursor, "transacoes", "data_operacao_iso", "TEXT")
@@ -110,6 +140,105 @@ def salvar_cotacoes(lista_dados):
     conexao.commit()
     conexao.close()
     print(f"{len(lista_dados)} cotacoes salvas no banco.")
+
+
+def normalizar_ticker(ticker):
+    """Maiusculo, sem espacos e sem o sufixo .SA.
+
+    O join entre as fontes e por ticker, entao a normalizacao tem que acontecer
+    na escrita. As funcoes antigas (salvar_cotacoes, salvar_fundamento) ainda
+    gravam o que a API devolveu; por ora as duas APIs em uso ja devolvem o
+    formato certo.
+    """
+    limpo = str(ticker).strip().upper()
+    if limpo.endswith(".SA"):
+        limpo = limpo[:-3]
+    return limpo
+
+
+def salvar_cotacoes_historicas(ticker, pontos):
+    """Grava a serie diaria de um ticker e devolve quantas linhas eram novas.
+
+    `pontos` e a lista de dicionarios que a brapi devolve em
+    historicalDataPrice. O INSERT OR IGNORE, somado ao UNIQUE(ticker, data),
+    e o que torna o backfill reexecutavel: rodar de novo sobre dias que ja
+    estao no banco nao duplica nem sobrescreve, so nao faz nada.
+
+    Pontos sem data ou sem fechamento sao descartados - sem esses dois campos
+    a linha nao serve para calcular retorno nenhum.
+    """
+    ticker = normalizar_ticker(ticker)
+    conexao = sqlite3.connect(CAMINHO_BANCO)
+    cursor = conexao.cursor()
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    antes = conexao.total_changes
+    descartados = 0
+
+    for ponto in pontos:
+        data_iso = _data_do_ponto(ponto)
+        if data_iso is None or ponto.get("close") is None:
+            descartados += 1
+            continue
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO cotacoes_historicas (
+                ticker, data, abertura, maxima, minima,
+                fechamento, fechamento_ajustado, volume, coletado_em
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            ticker,
+            data_iso,
+            ponto.get("open"),
+            ponto.get("high"),
+            ponto.get("low"),
+            ponto.get("close"),
+            # quando a API nao manda o ajustado, o fechamento cru e o melhor
+            # palpite - so nao vale fingir que sao a mesma coisa em silencio,
+            # por isso o backfill conta e reporta esses casos
+            ponto.get("adjustedClose"),
+            ponto.get("volume"),
+            agora,
+        ))
+
+    conexao.commit()
+    novas = conexao.total_changes - antes
+    conexao.close()
+    return novas, descartados
+
+
+def _data_do_ponto(ponto):
+    """Converte o campo `date` (epoch em segundos) para 'YYYY-MM-DD'.
+
+    A brapi manda a meia-noite de Sao Paulo (03:00 UTC). Converter com o fuso
+    da maquina daria o dia certo aqui, mas erraria por um dia em qualquer fuso
+    a oeste de UTC-3, que e onde 03:00 UTC ainda e a vespera. Como a data e a
+    chave do UNIQUE, um deslize desses geraria linha duplicada em vez de erro.
+    """
+    bruto = ponto.get("date")
+    if bruto is None:
+        return None
+    try:
+        momento = datetime.fromtimestamp(int(bruto), tz=timezone.utc)
+    except (ValueError, TypeError, OSError, OverflowError):
+        return None
+    return momento.astimezone(FUSO_B3).strftime("%Y-%m-%d")
+
+
+def contar_cotacoes_historicas():
+    """Devolve [(ticker, linhas, primeira_data, ultima_data)] para conferencia."""
+    conexao = sqlite3.connect(CAMINHO_BANCO)
+    cursor = conexao.cursor()
+    cursor.execute("""
+        SELECT ticker, COUNT(*), MIN(data), MAX(data)
+        FROM cotacoes_historicas
+        GROUP BY ticker
+        ORDER BY ticker
+    """)
+    resultado = cursor.fetchall()
+    conexao.close()
+    return resultado
 
 
 def ja_tem_fundamento_hoje(ticker):

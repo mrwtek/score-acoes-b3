@@ -48,6 +48,25 @@ registrada ainda" — normal se a carteira estiver vazia.
 
 ---
 
+### `python backfill_historico.py`
+**O que faz:** baixa da brapi os últimos 3 meses de pregões de cada ticker da
+whitelist e grava em `cotacoes_historicas` (um ponto por dia, com OHLC e
+fechamento ajustado).
+**Quando rodar:** **uma vez por mês.** Não é script de uso único. O plano free
+da brapi só entrega 3 meses, e essa janela desliza todo dia — rodando
+periodicamente, a série no banco cresce além dos 3 meses e buracos de coleta
+se fecham sozinhos. Se ficar mais de 3 meses sem rodar, o pedaço que passou da
+janela some para sempre.
+**Comportamento esperado:** leva ~45s com 13 tickers (pausa de 3,5s entre
+chamadas, por causa do limite de 20 requisições/minuto da brapi). Imprime
+quantos pregões vieram e quantos eram novos por ticker, depois uma tabela com
+o período que cada ticker tem no banco. Rodar de novo no mesmo dia é seguro:
+dá "0 novos" e não duplica nada.
+**Variante:** `python backfill_historico.py PETR4 VALE3` limita a esses
+tickers, em vez da whitelist inteira.
+
+---
+
 ## Scripts de manutenção (uso pontual, não diário)
 
 ### `python migrar_datas_iso.py`
@@ -85,6 +104,16 @@ horário de coleta.
 **Comportamento esperado:** lista de testes passando, incluindo um teste que
 existe só para lembrar que feriados não são considerados (limitação
 conhecida, não bug).
+
+### `python test_historico.py`
+**O que faz:** confirma que o backfill de preços históricos grava certo —
+conversão da data no fuso da B3, normalização de ticker, reexecução sem
+duplicar, e descarte de pontos sem data ou sem fechamento.
+**Quando rodar:** depois de qualquer mudança em `banco.py` que toque em
+`cotacoes_historicas`, ou em `coletor.py` que toque em `buscar_historico()`.
+**Comportamento esperado:** `15/15 testes passaram`, mais uma tabela mostrando
+o que a API manda e o que vai (ou não) para o banco em cada caso de borda.
+Usa banco temporário e não chama a API — não toca no `data/acoes.db`.
 
 ### `python test_bolsai.py`
 **O que faz:** faz uma chamada direta e crua à API BolsAI para um ticker, sem

@@ -34,6 +34,8 @@ trade-off antes de decidir por mim.
       main.py                 loop de coleta em thread + CLI
       gerenciar_posicoes.py   CLI de carteira (buy/sell/show)
       analise.py              cálculo dos scores (será extraído p/ scoring.py)
+      backfill_historico.py   backfill de preços diários da brapi; NÃO é de uso
+                              único — roda uma vez por mês para estender a série
       backfill_transacoes.py  script de uso único, já executado
       migrar_datas_iso.py     script de uso único, já executado
       test_bolsai.py          script solto de teste manual da API BolsAI
@@ -86,6 +88,17 @@ antes do código.
                data_operacao_iso, taxas, observacao)
         histórico append-only; `taxas` = só corretagem/emolumentos (IR fora,
         ver DECISOES.md)
+
+    cotacoes_historicas(id, ticker, data, abertura, maxima, minima,
+                        fechamento, fechamento_ajustado, volume, coletado_em,
+                        UNIQUE(ticker, data))
+        um ponto por pregão, vindo do histórico da brapi. Tabela nova, então
+        `data` é só ISO (`YYYY-MM-DD`) — não herda a convivência de dois
+        formatos. **Para retorno e série temporal, use esta tabela, não
+        `cotacoes`**: `cotacoes` é a série de coleta, com várias linhas por dia
+        e só o preço do momento. E use `fechamento_ajustado`, não `fechamento`,
+        sempre que comparar rendimento — o ajustado considera proventos e o
+        Ibovespa é índice de retorno total.
 
 **Duas representações de data convivem de propósito.** As colunas `data` /
 `hora_coleta` / `data_operacao` seguem no formato brasileiro (`%d/%m/%Y`) e

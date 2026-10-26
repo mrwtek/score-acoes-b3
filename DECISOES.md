@@ -9,6 +9,81 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 26/10/2026 — Histórico fica em tabela própria, não dentro de `cotacoes`
+
+**Decisão:** criar `cotacoes_historicas` separada, em vez de gravar o histórico
+da brapi dentro de `cotacoes`.
+
+**Por quê:** são duas coisas diferentes com o mesmo nome. `cotacoes` é a série
+de coleta: várias linhas por dia, só o preço do momento, hora granular de
+propósito (sazonalidade intradiária). O histórico é um ponto por pregão, com
+OHLC e fechamento ajustado, e sem hora. Juntar as duas obrigaria metade das
+colunas a ficar nula em metade das linhas, e qualquer `GROUP BY ticker, data`
+passaria a misturar as duas naturezas sem avisar.
+
+**Efeito colateral:** quem for calcular retorno tem que saber qual tabela usar.
+Regra: retorno e série temporal vêm de `cotacoes_historicas`; "preço agora" vem
+de `cotacoes`.
+
+---
+
+## 26/10/2026 — O backfill de histórico é rotina, não script de uso único
+
+**Decisão:** `backfill_historico.py` nasce reexecutável (`UNIQUE(ticker, data)`
++ `INSERT OR IGNORE`) e entra nas notas de operação como tarefa mensal. Difere
+de `backfill_transacoes.py` e `migrar_datas_iso.py`, que rodaram uma vez.
+
+**Por quê:** o plano free da brapi só entrega 3 meses, mas essa janela desliza
+todo dia. Rodando periodicamente, a série no banco cresce além dos 3 meses e
+buracos de coleta se fecham sozinhos — desde que o buraco ainda esteja dentro
+da janela. É o que transforma um limite de plano em algo aproveitável a longo
+prazo, sem pagar R$ 139,99/mês pelo Pro.
+
+**O que isso custa:** se o projeto ficar parado mais de 3 meses, o pedaço que
+passou da janela some para sempre neste plano. Em 26/10 o buraco de coleta de
+14/09 ainda era recuperável; por volta de meados de dezembro não seria mais.
+
+**Alternativa descartada:** yfinance, que dá anos de histórico de graça.
+Descartada por ser dependência nova e fonte não-oficial. Decisão do usuário,
+não limitação técnica — se a série curta incomodar, é para reabrir.
+
+---
+
+## 26/10/2026 — Data do histórico convertida no fuso da B3, não no da máquina
+
+**Decisão:** `_data_do_ponto()` converte o epoch da brapi com
+`ZoneInfo("America/Sao_Paulo")` explícito, em vez de `datetime.fromtimestamp()`
+puro.
+
+**Por quê:** a brapi manda a meia-noite de São Paulo (03:00 UTC). Com o fuso da
+máquina, dá o dia certo aqui e em UTC — mas erra por um dia em qualquer fuso a
+oeste de UTC-3, onde 03:00 UTC ainda é a véspera. Como a data é parte do
+`UNIQUE`, o erro não apareceria como exceção: apareceria como linha duplicada
+e retorno calculado errado.
+
+**Dívida aceita:** `FUSO_B3` agora existe em `main.py` e em `banco.py`. Não
+centralizei para não refatorar `main.py` fora da tarefa. Se um terceiro arquivo
+precisar, vale mover para `paths.py`.
+
+---
+
+## 26/10/2026 — `adjustedClose` ausente vira NULL, não cópia do fechamento
+
+**Decisão:** quando a API não manda o fechamento ajustado, gravar NULL.
+
+**Por quê:** copiar o fechamento cru pareceria razoável e seria errado em
+silêncio — esconderia proventos não contabilizados dentro de um número que diz
+contabilizá-los. NULL deixa o buraco visível para quem for calcular retorno.
+Na primeira carga, 422 das 819 linhas tinham ajustado diferente do fechamento,
+ou seja, o campo carrega informação de verdade e não é decorativo.
+
+**Vale lembrar:** o Ibovespa é índice de retorno total. Comparar ação contra
+IBOV usando `fechamento` em vez de `fechamento_ajustado` subestima a ação em
+todo dividendo pago. Para os FIIs da carteira, onde quase todo o retorno é
+provento, o erro seria grosseiro.
+
+---
+
 ## 04/09/2026 — Teto no earnings yield para evitar outlier de P/L quase zero
 
 Decisao: earnings_yield capado em 1.0 (equivalente a P/L=1). Acima disso,
