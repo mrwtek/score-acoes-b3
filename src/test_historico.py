@@ -238,15 +238,46 @@ def teste_15_resumo_reporta_periodo_por_ticker():
 
 
 # --------------------------------------------------------------------------
-# 16. O pregao de hoje nao entra: a barra do dia ainda esta se formando
+# 16. O pregao de hoje so fica de fora ENQUANTO a sessao esta aberta
+#
+# A versao anterior destes testes fixava "hoje nunca entra". Isso estava
+# errado e apagou 13 linhas reais em 26/10/2026 -- ver
+# data_limite_para_historico() no banco.py. Agora cada teste diz
+# explicitamente se o pregao esta aberto ou fechado.
 # --------------------------------------------------------------------------
 def ponto_de_hoje(close=10.0):
     hoje = datetime.strptime(banco.hoje_b3(), "%Y-%m-%d")
     return ponto(hoje.year, hoje.month, hoje.day, close=close)
 
 
-def teste_16_barra_de_hoje_e_ignorada():
-    with BancoTemporario() as temporario:
+class PregaoAberto:
+    """Finge que a sessao de hoje ainda esta em andamento."""
+
+    def __enter__(self):
+        self.original = banco.data_limite_para_historico
+        banco.data_limite_para_historico = lambda momento=None: banco.hoje_b3()
+        return self
+
+    def __exit__(self, *_):
+        banco.data_limite_para_historico = self.original
+        return False
+
+
+class PregaoFechado:
+    """Finge que a sessao de hoje ja terminou."""
+
+    def __enter__(self):
+        self.original = banco.data_limite_para_historico
+        banco.data_limite_para_historico = lambda momento=None: None
+        return self
+
+    def __exit__(self, *_):
+        banco.data_limite_para_historico = self.original
+        return False
+
+
+def teste_16_barra_de_hoje_e_ignorada_com_pregao_aberto():
+    with BancoTemporario() as temporario, PregaoAberto():
         resultado = banco.salvar_cotacoes_historicas("PETR4", [ponto_de_hoje()])
 
         assert resultado.novas == 0, (
@@ -258,7 +289,7 @@ def teste_16_barra_de_hoje_e_ignorada():
 
 
 def teste_17_hoje_e_ignorado_sem_bloquear_os_dias_fechados():
-    with BancoTemporario() as temporario:
+    with BancoTemporario() as temporario, PregaoAberto():
         resultado = banco.salvar_cotacoes_historicas("PETR4", [
             ponto(2026, 7, 28),
             ponto(2026, 7, 29),
@@ -271,12 +302,52 @@ def teste_17_hoje_e_ignorado_sem_bloquear_os_dias_fechados():
 
 
 def teste_18_dia_em_andamento_nao_conta_como_descarte():
-    with BancoTemporario():
+    with BancoTemporario(), PregaoAberto():
         resultado = banco.salvar_cotacoes_historicas("PETR4", [ponto_de_hoje()])
 
         assert resultado.descartadas == 0, (
             "ignorar o pregao de hoje e rotina; so dado corrompido conta como descarte"
         )
+
+
+def teste_19_barra_de_hoje_ENTRA_depois_do_fechamento():
+    with BancoTemporario() as temporario, PregaoFechado():
+        resultado = banco.salvar_cotacoes_historicas("BBAS3", [ponto_de_hoje(close=17.47)])
+
+        assert resultado.novas == 1, (
+            "a barra de hoje foi recusada depois do fechamento. Foi assim que "
+            "13 pregoes reais de 26/10/2026 foram apagados: naquele dia os "
+            "bancos cairam de verdade e a regra leu isso como dado corrompido"
+        )
+        assert resultado.em_andamento == 0
+        assert temporario.linhas()[0][5] == 17.47
+
+
+def teste_20_queda_violenta_nao_e_motivo_para_descartar():
+    # numeros reais de 23/10 -> 26/10/2026: BBAS3 -29,33%, confirmado no
+    # Investidor10 no mesmo dia. Implausibilidade nao e criterio para apagar.
+    with BancoTemporario() as temporario, PregaoFechado():
+        banco.salvar_cotacoes_historicas("BBAS3", [
+            ponto(2026, 10, 23, close=24.72),
+            ponto_de_hoje(close=17.47),
+        ])
+
+        fechamentos = [linha[5] for linha in temporario.linhas()]
+        assert fechamentos == [24.72, 17.47], (
+            "a queda de 29% foi filtrada. Quando a fonte e o codigo discordam, "
+            "confira com uma segunda fonte -- nao deduza do formato do numero"
+        )
+
+
+def teste_21_data_limite_segue_o_horario_do_pregao():
+    from datetime import datetime as dt
+    from banco import FUSO_B3, data_limite_para_historico
+
+    durante = dt(2026, 10, 26, 15, 0, tzinfo=FUSO_B3)
+    depois = dt(2026, 10, 26, 18, 30, tzinfo=FUSO_B3)
+
+    assert data_limite_para_historico(durante) == "2026-10-26", "pregao aberto: exclui hoje"
+    assert data_limite_para_historico(depois) is None, "pregao fechado: nao exclui nada"
 
 
 if __name__ == "__main__":

@@ -176,9 +176,41 @@ def normalizar_ticker(ticker):
     return limpo
 
 
+# Hora em que o pregao fecha, no fuso da B3. Mesma constante do main.py.
+HORA_FECHAMENTO = 18
+
+
 def hoje_b3():
     """Data de hoje no fuso da B3, em 'YYYY-MM-DD'."""
     return datetime.now(FUSO_B3).strftime("%Y-%m-%d")
+
+
+def data_limite_para_historico(momento=None):
+    """Ultima data que ja pode ser gravada como pregao fechado.
+
+    Devolve a data de hoje enquanto o pregao esta em andamento, e None depois
+    do fechamento -- quando nao ha mais nada a excluir.
+
+    CORRECAO de 26/10/2026. A versao anterior recusava QUALQUER barra com a
+    data de hoje, e o motivo escrito era que a brapi devolvia numeros
+    inconsistentes para o dia corrente. Isso estava errado: naquele dia os
+    bancos caíram de verdade (BBAS3 -29,33%, BBDC4 -21,70%) enquanto VALE3
+    subia 4,01%, e eu li esse padrao como dado corrompido. Era evento de
+    setor, nao defeito da fonte -- o Investidor10 mostrava os mesmos precos.
+    Treze linhas reais foram apagadas por causa dessa leitura.
+
+    O risco que a regra tenta evitar e real, mas so existe DURANTE o pregao:
+    ali a barra ainda muda e o INSERT OR IGNORE congelaria um valor parcial.
+    Depois do fechamento a barra e final e tem que entrar.
+
+    Licao que fica: implausibilidade nao e criterio para apagar dado. Quando a
+    fonte e o codigo discordam, conferir com uma segunda fonte antes, nunca
+    deduzir do formato do numero.
+    """
+    momento = momento or datetime.now(FUSO_B3)
+    if momento.hour < HORA_FECHAMENTO:
+        return momento.strftime("%Y-%m-%d")
+    return None
 
 
 # O que aconteceu com os pontos recebidos. `em_andamento` fica separado de
@@ -198,18 +230,16 @@ def salvar_cotacoes_historicas(ticker, pontos):
     Pontos sem data ou sem fechamento sao descartados - sem esses dois campos
     a linha nao serve para calcular retorno nenhum.
 
-    O pregao de HOJE tambem e ignorado. A barra do dia corrente ainda esta se
-    formando e a brapi devolve numeros inconsistentes para ela: em 26/10/2026,
-    as 17h, o ^BVSP aparecia com amplitude de 21% no dia (contra 1,5% tipico) e
-    BBAS3 caindo 29% enquanto VALE3 subia 4%. Como o INSERT OR IGNORE nunca
-    corrige uma linha ja gravada, uma barra parcial ficaria congelada errada
-    para sempre. O preco de hoje ja esta em `cotacoes`, que e a serie de coleta.
+    O pregao de hoje so e ignorado ENQUANTO a sessao esta aberta, porque ali a
+    barra ainda muda e o INSERT OR IGNORE congelaria um valor parcial. Depois
+    do fechamento ela entra normalmente. Ver data_limite_para_historico(), que
+    documenta o erro que essa regra ja causou.
     """
     ticker = normalizar_ticker(ticker)
     conexao = sqlite3.connect(CAMINHO_BANCO)
     cursor = conexao.cursor()
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    hoje = hoje_b3()
+    limite = data_limite_para_historico()
 
     antes = conexao.total_changes
     descartadas = 0
@@ -221,7 +251,7 @@ def salvar_cotacoes_historicas(ticker, pontos):
             descartadas += 1
             continue
 
-        if data_iso >= hoje:
+        if limite is not None and data_iso >= limite:
             em_andamento += 1
             continue
 
@@ -309,7 +339,7 @@ def salvar_indices(codigo, tipo, pontos):
     conexao = sqlite3.connect(CAMINHO_BANCO)
     cursor = conexao.cursor()
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    hoje = hoje_b3()
+    limite = data_limite_para_historico()
 
     antes = conexao.total_changes
     descartadas = 0
@@ -320,7 +350,7 @@ def salvar_indices(codigo, tipo, pontos):
             descartadas += 1
             continue
 
-        if data_iso >= hoje:
+        if limite is not None and data_iso >= limite:
             em_andamento += 1
             continue
 

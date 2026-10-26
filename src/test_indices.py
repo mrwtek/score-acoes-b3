@@ -218,18 +218,40 @@ def teste_16_valor_ausente_e_descartado():
         assert len(temporario.linhas()) == 1
 
 
-def teste_17_dia_de_hoje_e_ignorado():
-    with BancoTemporario() as temporario:
-        resultado = banco.salvar_indices("IBOV", TIPO_PRECO, [
-            (data_de_ontem(), 136000.0),
-            (data_de_hoje(), 999999.0),
-        ])
+def teste_17_dia_de_hoje_e_ignorado_so_com_pregao_aberto():
+    original = banco.data_limite_para_historico
+    banco.data_limite_para_historico = lambda momento=None: banco.hoje_b3()
+    try:
+        with BancoTemporario() as temporario:
+            resultado = banco.salvar_indices("IBOV", TIPO_PRECO, [
+                (data_de_ontem(), 136000.0),
+                (data_de_hoje(), 999999.0),
+            ])
 
-        assert resultado.novas == 1
-        assert resultado.em_andamento == 1, (
-            "o nivel do Ibovespa de hoje ainda muda ate o fechamento"
-        )
-        assert temporario.linhas()[0][1] == data_de_ontem()
+            assert resultado.novas == 1
+            assert resultado.em_andamento == 1, (
+                "o nivel do Ibovespa de hoje ainda muda ate o fechamento"
+            )
+            assert temporario.linhas()[0][1] == data_de_ontem()
+    finally:
+        banco.data_limite_para_historico = original
+
+
+def teste_17b_dia_de_hoje_entra_depois_do_fechamento():
+    original = banco.data_limite_para_historico
+    banco.data_limite_para_historico = lambda momento=None: None
+    try:
+        with BancoTemporario() as temporario:
+            resultado = banco.salvar_indices("IBOV", TIPO_PRECO, [
+                (data_de_hoje(), 176608.23),
+            ])
+
+            assert resultado.novas == 1, (
+                "fechado o pregao, o nivel do dia e final e tem que entrar"
+            )
+            assert temporario.linhas()[0][2] == 176608.23
+    finally:
+        banco.data_limite_para_historico = original
 
 
 def teste_18_resumo_reporta_codigo_tipo_e_periodo():
