@@ -39,6 +39,8 @@ trade-off antes de decidir por mim.
                               nota); avisa incoerência sem remover
       setores.py              setor por ticker e quais indicadores não se
                               aplicam a cada setor. Só responde, não pontua
+      teses.py                diário de teses: registra o que você achou, com
+                              prazo e critério, e confere contra IBOV e CDI
       analise.py              carregadores do banco + `ranking_atual()` +
                               impressão do ranking. Sabe de SQLite, não de
                               fórmula
@@ -127,6 +129,16 @@ antes do código.
         +46,34% pelo ajustado contra +42,39% pelo cru no mesmo período.
         **O pregão do dia corrente nunca é gravado aqui** — a barra ainda está
         se formando e o `INSERT OR IGNORE` congelaria o valor errado.
+
+    teses(id, ticker, data_abertura, preco_abertura, premissa, criterio,
+          horizonte_dias, score_abertura, status, data_encerramento,
+          veredito, criado_em)
+        diário de teses. `preco_abertura` e `score_abertura` ficam congelados
+        de propósito — a metodologia do score ainda muda, e a nota de hoje
+        precisa continuar sendo a de hoje na hora de conferir.
+        **Prazo e critério são obrigatórios na abertura**: tese sem prazo não
+        pode falhar, e só o que pode falhar ensina. Append-only na prática:
+        encerrar escreve o veredito, nunca apaga.
 
     indices(id, codigo, data, valor, tipo, coletado_em, UNIQUE(codigo, data))
         benchmarks. `codigo` ∈ {IBOV, SELIC, CDI}; `data` em ISO.

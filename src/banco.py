@@ -121,6 +121,33 @@ def criar_tabelas():
         )
     """)
 
+    # Diario de teses: o que voce achou, quando, por que, e ate quando.
+    #
+    # Existe para separar "eu estava certo" de "deu certo". Sem prazo e sem
+    # criterio gravados ANTES, qualquer tese e inrefutavel -- sempre da para
+    # dizer "ainda vai voltar". Com prazo, ela pode falhar, e so o que pode
+    # falhar ensina alguma coisa.
+    #
+    # `preco_abertura` e `score_abertura` ficam congelados de proposito: a
+    # metodologia do score ainda vai mudar (P1-11 em diante), e a nota de hoje
+    # precisa continuar sendo a nota de hoje quando formos conferir.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS teses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            data_abertura TEXT NOT NULL,
+            preco_abertura REAL NOT NULL,
+            premissa TEXT NOT NULL,
+            criterio TEXT NOT NULL,
+            horizonte_dias INTEGER NOT NULL,
+            score_abertura REAL,
+            status TEXT NOT NULL DEFAULT 'aberta',
+            data_encerramento TEXT,
+            veredito TEXT,
+            criado_em TEXT NOT NULL
+        )
+    """)
+
     _adicionar_coluna_se_faltar(cursor, "cotacoes", "data_hora_iso", "TEXT")
     _adicionar_coluna_se_faltar(cursor, "fundamentos", "data_hora_iso", "TEXT")
     _adicionar_coluna_se_faltar(cursor, "transacoes", "data_operacao_iso", "TEXT")
@@ -378,6 +405,49 @@ def contar_indices():
     resultado = cursor.fetchall()
     conexao.close()
     return resultado
+
+
+def salvar_tese(ticker, data_abertura, preco_abertura, premissa, criterio,
+                horizonte_dias, score_abertura=None):
+    """Grava uma tese aberta e devolve o id."""
+    ticker = normalizar_ticker(ticker)
+    conexao = sqlite3.connect(CAMINHO_BANCO)
+    cursor = conexao.cursor()
+    cursor.execute("""
+        INSERT INTO teses (ticker, data_abertura, preco_abertura, premissa,
+                           criterio, horizonte_dias, score_abertura, status, criado_em)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'aberta', ?)
+    """, (ticker, data_abertura, preco_abertura, premissa, criterio,
+          horizonte_dias, score_abertura,
+          datetime.now(FUSO_B3).strftime("%Y-%m-%d %H:%M:%S")))
+    conexao.commit()
+    id_tese = cursor.lastrowid
+    conexao.close()
+    return id_tese
+
+
+def listar_teses(apenas_abertas=False):
+    """Devolve as teses como lista de dicionarios, mais antiga primeiro."""
+    conexao = sqlite3.connect(CAMINHO_BANCO)
+    conexao.row_factory = sqlite3.Row
+    sql = "SELECT * FROM teses"
+    if apenas_abertas:
+        sql += " WHERE status = 'aberta'"
+    sql += " ORDER BY data_abertura, ticker"
+    linhas = [dict(linha) for linha in conexao.execute(sql).fetchall()]
+    conexao.close()
+    return linhas
+
+
+def encerrar_tese(id_tese, veredito, data_encerramento=None):
+    """Fecha uma tese com o veredito escrito. Nao apaga nada."""
+    conexao = sqlite3.connect(CAMINHO_BANCO)
+    conexao.execute("""
+        UPDATE teses SET status = 'encerrada', veredito = ?, data_encerramento = ?
+        WHERE id = ?
+    """, (veredito, data_encerramento or hoje_b3(), id_tese))
+    conexao.commit()
+    conexao.close()
 
 
 def ja_tem_fundamento_hoje(ticker):

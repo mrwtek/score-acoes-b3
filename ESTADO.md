@@ -69,6 +69,12 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       indicador sai do cálculo com o peso redistribuído, em vez de virar 0.
       Divergi da 7A.6 em um ponto: inaplicável é tratado como ausente, não com
       nota neutra. Justificado no DECISOES.md e fácil de reverter.
+- [x] **Diário de teses** (tarefa nova, fora do PRD) — tabela `teses` e
+      `src/teses.py`. Registra premissa, prazo e critério ANTES, e confere
+      contra IBOV e CDI depois. Primeiras duas teses abertas em 26/10/2026
+      (BBAS3 e BBDC4, queda pós-eleição), vencimento em 24/01/2027.
+      Relacionado ao P1-4, mas não é a mesma coisa: o P1-4 fotografa o score,
+      este guarda o raciocínio.
 - [x] **BUG-01** `carregar_fundamentos_mais_recentes()` ordenava por `MAX(data)`
       textual (`dd/mm/aaaa`), então `31/08/2026` saía maior que `14/09/2026` e
       o ranking rodava sobre o fundamento mais antigo do banco. Trocado por

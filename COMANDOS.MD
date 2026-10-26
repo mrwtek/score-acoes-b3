@@ -77,6 +77,15 @@ período comparável. Avisa se as séries terminarem em datas diferentes — o B
 publica a taxa com alguns dias de atraso, e isso é da fonte, não erro.
 **Variante:** `python backfill_indices.py 2026-01-01` busca desde a data dada.
 
+### `python teses.py`
+**O que faz:** mostra o painel das teses abertas — o que você achou, quando,
+com que prazo e critério, e como está indo contra o IBOV e o CDI.
+**Quando rodar:** de tempos em tempos, e sempre no vencimento de uma tese.
+**Não coleta nada** — só lê. Para abrir uma tese nova, me peça; a função é
+`abrir_tese()` e ela exige prazo e critério escritos antes.
+**Comportamento esperado:** se não houver pregão novo desde a abertura, diz
+"ainda sem pregão novo para medir" e não inventa número.
+
 ### `python indices.py`
 **O que faz:** imprime a comparação de rendimento — cada ação, o Ibovespa e o
 CDI no mesmo período, ordenados, com a diferença em pontos percentuais contra
@@ -135,6 +144,13 @@ e o cálculo do score (dado ausente, cobertura, peso redistribuído).
 ou `scoring.py` — ou seja, em toda tarefa do bloco de score.
 **Comportamento esperado:** 15/15, 12/12 e 14/14, cada um terminando numa
 tabela de conferência manual. Nenhum toca o banco nem a API.
+
+### `python test_teses.py`
+**O que faz:** confere o diário de teses — registro com prazo obrigatório,
+cálculo contra IBOV e CDI, e o corte das séries na data mais curta.
+**Quando rodar:** depois de mexer em `teses.py`.
+**Comportamento esperado:** `13/13 testes passaram`, mais uma tabela que
+mostra por que subir 8% com o IBOV em 20% não é acerto.
 
 ### `python test_analise.py`
 **O que faz:** confirma que os carregadores do `analise.py` leem a linha
