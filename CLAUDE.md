@@ -49,6 +49,10 @@ trade-off antes de decidir por mim.
       indices.py              benchmarks: IBOV (brapi) e Selic/CDI (BCB), mais
                               as contas de rendimento; `python indices.py`
                               imprime a comparação ação × IBOV × CDI
+      exportar_bi.py          camada de BI: lê o banco e grava CSVs em
+                              `exports/bi/` para o Power BI. Só lê. `f_score`
+                              é append — é ele que dá série ao score, que não
+                              existe no banco
       backfill_historico.py   backfill de preços diários da brapi; NÃO é de uso
                               único — roda uma vez por mês para estender a série
       backfill_indices.py     idem, para IBOV, Selic e CDI

@@ -97,6 +97,34 @@ séries existem, mostra quantos pregões cada papel tem, e usa o **fechamento
 ajustado** das ações (considera proventos; o Ibovespa é índice de retorno
 total, então comparar com preço cru subestimaria as ações).
 
+### `python exportar_bi.py`
+**O que faz:** gera a camada de BI — oito CSVs em `exports/bi/` para o Power
+BI ler. Não altera o banco, só lê.
+**Quando rodar:** antes de abrir (ou atualizar) o Power BI, depois de uma
+coleta ou de um backfill.
+**Comportamento esperado:** imprime a contagem de linhas por arquivo, a janela
+em que preço, IBOV e CDI existem juntos, e quais tickers ficaram sem score
+fundamentalista (os FIIs não têm fundamento — é esperado).
+
+Os arquivos: `dim_ativo`, `f_preco_diario`, `f_indice`, `f_fundamento`,
+`f_posicao`, `f_transacao`, `f_tese`, `f_score` e `meta_exportacao`.
+
+**`f_score.csv` é o único em modo append**, e isso é de propósito: o score não
+é gravado no banco, só calculado na hora. Cada execução acrescenta o snapshot
+do dia, e é daí que vai sair o gráfico de evolução de score daqui a alguns
+meses. Rodar duas vezes no mesmo dia reescreve o dia, não duplica.
+
+**No Power BI:** Obter dados → Pasta → `exports\bi`. Os CSVs saem no padrão
+brasileiro (separador `;`, decimal `,`), que é o que o Power BI em português
+importa sem pedir ajuste. Se os números chegarem como texto, o seu Power BI
+está em outra localidade: troque `SEPARADOR` e `DECIMAL` no topo do
+`exportar_bi.py` — os dois juntos.
+
+**Três coisas que o arquivo já resolve e que você não deve refazer em DAX:**
+preço sai de `cotacoes_historicas` (nunca de `cotacoes`); toda data sai em
+ISO, inclusive a convertida do formato brasileiro; e `f_indice` traz a coluna
+`fator_diario`, para o CDI ser acumulado com `PRODUCTX` e não com `SUM`.
+
 ---
 
 ## Scripts de manutenção (uso pontual, não diário)
@@ -181,6 +209,16 @@ mostra o erro de somar taxa diária em vez de compor, crescendo com o prazo.
 As três linhas "pulando ponto que nao consegui converter" no meio da saída
 são esperadas: fazem parte de um teste de dado malformado.
 
+### `python test_exportar_bi.py`
+**O que faz:** confirma as três conversões da camada de BI que erram em
+silêncio — data no formato brasileiro virando ISO, fator diário de taxa, e o
+append do snapshot de score sem duplicar o dia.
+**Quando rodar:** depois de mexer em `exportar_bi.py`.
+**Comportamento esperado:** `22/22 testes passaram`, mais duas tabelas: uma
+mostrando que a ordem alfabética das datas em formato brasileiro não é
+cronológica, outra com o erro de somar o CDI em vez de compor. Usa banco em
+memória — não toca no `data/acoes.db` nem em `exports/bi/`.
+
 ### `python test_bolsai.py`
 **O que faz:** faz uma chamada direta e crua à API BolsAI para um ticker, sem
 passar pelo resto do sistema. Só imprime a resposta.
@@ -223,3 +261,15 @@ cd src
 python gerenciar_posicoes.py
 ```
 digite `buy` ou `sell` com os dados da operação.
+
+## "Quero ver tudo no Power BI"
+
+```
+cd src
+python exportar_bi.py
+```
+depois, no Power BI: Obter dados → Pasta → `exports\bi` → Combinar e
+Transformar. Se o relatório já existe, basta **Atualizar**.
+
+Rode a exportação sempre **depois** da coleta, nunca antes — senão o Power BI
+mostra o dia anterior com cara de hoje.

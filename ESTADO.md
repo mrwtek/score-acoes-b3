@@ -102,6 +102,26 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       `INSERT OR IGNORE` a congelaria errada para sempre — 13 linhas do dia
       26/10 foram removidas do banco. Ver DECISOES.md.
 
+- [x] **Camada de BI para Power BI** (tarefa nova, fora do PRD) —
+      `src/exportar_bi.py` gera oito CSVs em `exports/bi/`, mais
+      `meta_exportacao.csv`. Escolhido exportar em vez de ligar o Power BI
+      direto no `.db`: o conector de SQLite depende de driver ODBC de
+      terceiros instalado com admin, e o Power BI aqui é o da Microsoft Store,
+      que roda em sandbox. A razão melhor é que as regras do schema ficam em
+      Python testado, não espalhadas em DAX — preço sempre de
+      `cotacoes_historicas`, data sempre ISO na saída, e `f_indice` com a
+      coluna `fator_diario` pronta para o CDI ser composto e não somado.
+      `test_exportar_bi.py` com 22 testes. Primeira exportação: 819 linhas de
+      preço, 188 de índice, 70 de fundamento, 10 de score.
+      **`f_score.csv` é append e não substitui o P1-4.** O score não existe no
+      banco, só é calculado na hora; cada execução congela o snapshot do dia
+      no CSV, o que dá a série de evolução sem antecipar o `snapshots.py`.
+      Quando o P1-4 existir, a fonte do `f_score` passa a ser a tabela.
+      Ressalva conhecida: os três FIIs (MXRF11, GARE11, BTCI11) não aparecem
+      no `f_score` porque `calcular_ranking()` parte dos fundamentos e eles
+      não têm. Ficam contados em `meta_exportacao.csv` em vez de entrar com
+      nota inventada.
+
 ### Limpeza de 26/10/2026 (ao retomar o projeto)
 Três coisas estavam fora do lugar depois de ~7 semanas parado:
 - `ESTADO.md` no disco tinha regredido para a versão de 02/09; restaurado da
