@@ -49,12 +49,11 @@ Power BI/
 
 **Pendências conhecidas**, em ordem de quanto atrapalham:
 
-1. **Falta a segmentação por período** na tela de benchmark; sem ela as
-   medidas `base 100` nunca são reancoradas.
-2. A Ficha do ativo usa **slicer de ticker, não drill-through** (§3.4).
-3. O slicer da tela de benchmark está com **seleção salva em `ITUB4`** —
-   aquela página abre filtrada nesse papel.
-4. **Eixo e legenda ficaram no tamanho padrão** de fonte (§0.5).
+1. A Ficha do ativo usa **slicer de ticker, não drill-through** (§3.4).
+2. O slicer de ticker da tela de benchmark está com **seleção salva em
+   `ITUB4`** — aquela página abre filtrada nesse papel. Não foi mexido
+   porque pode ser intenção sua; se não for, basta limpar a seleção e salvar.
+3. **Eixo e legenda ficaram no tamanho padrão** de fonte (§0.5).
 
 ### 0.5 A grade do relatório
 
@@ -696,7 +695,7 @@ Tabela: ticker, `Quantidade`, `f_posicao[preco_medio]`, `Preço`,
 Montada com os cinco cartões, as barras de resultado por ticker, as duas
 roscas (por classe e por setor) e a tabela de posições.
 
-### 3.2 Desempenho contra benchmark — FEITA, falta o filtro de período
+### 3.2 Desempenho contra benchmark — FEITA
 
 Gráfico de linhas com `dim_calendario[Date]` no eixo e as três medidas base
 100. Segmentação por `dim_ativo[ticker]` e por período.
@@ -708,11 +707,12 @@ comparação vale.
 A caixa de texto com o `Fim comparável` ficou como valor dinâmico, que é o
 jeito certo — ela acompanha o dado em vez de envelhecer.
 
-Falta a segmentação por período. Sem ela, todas as medidas de retorno sempre
-olham a série inteira, e as três medidas `base 100` nunca são reancoradas:
-elas usam `ALLSELECTED(dim_calendario)`, que existe justamente para responder
-a um filtro de data. Acrescente uma segmentação de `dim_calendario[Date]` no
-modo Entre.
+**O filtro de período é o que faz esta tela funcionar.** As três medidas
+`base 100` usam `ALLSELECTED(dim_calendario)`, que existe justamente para
+responder a um filtro de data — sem ele elas nunca são reancoradas e o
+gráfico só sabe mostrar a série inteira. O filtro é uma segmentação de
+`dim_calendario[Date]`, deixada sem seleção e sem modo forçado: campo de
+data o Power BI já renderiza como intervalo.
 
 ### 3.3 Ranking — FEITA
 

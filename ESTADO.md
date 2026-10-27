@@ -242,11 +242,10 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
       e visuais encostados na borda. `POWERBI.md` §0.5.
 
       **Pendências, da que mais atrapalha para a que menos:**
-      1. Falta a segmentação por período na tela de benchmark. Não é
-         enfeite: as três medidas `base 100` usam
-         `ALLSELECTED(dim_calendario)`, então sem filtro de data elas nunca
-         são reancoradas e o gráfico só sabe mostrar a série inteira.
-      2. O slicer da tela de benchmark está com seleção salva em `ITUB4`.
+      1. A Ficha do ativo usa slicer de ticker, não drill-through
+         (`POWERBI.md` §3.4 diz como converter).
+      2. O slicer de ticker da tela de benchmark está com seleção salva em
+         `ITUB4`. Não foi mexido porque pode ser intenção.
       3. Eixo e legenda ficaram no tamanho padrão de fonte: os nomes desses
          objetos de formatação não aparecem em nenhum visual do relatório,
          então não havia o que clonar com segurança.
