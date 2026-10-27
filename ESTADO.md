@@ -218,7 +218,21 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
       12 colunas de conferência de `f_tese` deixaram de ser texto, o que
       destravou as 4 medidas de tese. De brinde, a troca de `QuoteStyle.None`
       para `QuoteStyle.Csv` tira as aspas que apareciam na premissa.
-      **Falta conferir com dado real:** nenhuma tese tem medição ainda.
+
+      A retipagem **impediu o projeto de abrir** na primeira tentativa
+      (`PFE_XM_DATATYPE_CONVERSION_FAILED`, `Valor: ''`). Duas causas: o
+      `cache.abf` guardava os valores antigos como texto e o engine tentava
+      encaixá-los no schema novo em vez de reimportar; e campo vazio chegava
+      do `Csv.Document` como string vazia, que não vira número. Resolvido
+      fazendo a `fnLerBI` trocar `""` por `null` em todas as colunas — regra
+      certa pelo projeto, campo vazio é ausência — e removendo o `cache.abf`,
+      que se regenera. Roteiro, se repetir: fechar o Power BI, apagar o
+      `cache.abf`, reabrir, atualizar. `POWERBI.md` §0.4.
+
+      **Falta conferir com dado real:** nenhuma tese tem medição ainda, então
+      o que se prova agora é que o modelo abre, não que o número entra certo.
+      `f_transacao[taxas]` tem o mesmo defeito e segue como texto, de
+      propósito — não quebra nada e não se mistura com esta correção.
 
       **Pendências, da que mais atrapalha para a que menos:**
       1. Falta a segmentação por período na tela de benchmark. Não é

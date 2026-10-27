@@ -102,9 +102,57 @@ Agora são `type number`, `Int64.Type`, `type date` e `type logical`, no M e no
 Dados", ela nasce texto e fica assim. Ao acrescentar coluna ao exportador,
 confira o tipo na consulta antes de construir medida em cima.
 
-**Falta conferir com dado real:** nenhuma das duas teses tem medição ainda, e
-é só quando a primeira tiver que dá para ver os valores entrando nas colunas
-já tipadas — em especial `vencida`, que vem do pandas como `True`/`False`.
+### 0.4 O que a retipagem quebrou, e como foi resolvido
+
+A primeira tentativa de retipar `f_tese` **impediu o projeto de abrir**, com
+`PFE_XM_DATATYPE_CONVERSION_FAILED` nas 12 colunas, uma por uma:
+
+```
+A conversão de tipo de dados para [Tabela: '', Coluna: '', Valor: ''] falhou.
+```
+
+Repare no `Valor: ''` — vazio. E repare onde o erro acontece: em
+`TmslApplier.ApplyTmsl`, ao aplicar a definição do modelo no engine, **antes
+de qualquer atualização de dados**. Duas causas somadas:
+
+1. **O `cache.abf` guardava os valores antigos como texto.** Ao abrir, o
+   engine tenta encaixar os dados que já tem no schema novo, em vez de
+   reimportar. Converter uma string vazia para número ou data falha, e a
+   transação inteira é cancelada.
+2. **Campo vazio no CSV chegava como string vazia, não como nulo.** O
+   `Csv.Document` devolve `""` para célula vazia, e `""` não vira número.
+   Enquanto as colunas eram texto isso passava despercebido.
+
+As duas correções:
+
+- A **`fnLerBI` passou a trocar `""` por `null`** em todas as colunas, logo
+  depois de promover o cabeçalho:
+
+  ```m
+  Vazios = Table.ReplaceValue(Cabecalho, "", null, Replacer.ReplaceValue,
+                              Table.ColumnNames(Cabecalho))
+  ```
+
+  Vale para as 9 consultas, não só para `f_tese`, e é o comportamento certo
+  pela regra do projeto: **campo vazio é ausência, não string vazia**. Em DAX
+  vira `BLANK()`, que `AVERAGE` ignora, em vez de um texto que nenhuma conta
+  aceita.
+
+- O **`cache.abf` foi removido**, para o modelo reimportar do zero em vez de
+  tentar converter o que tinha. Ele se regenera na primeira atualização.
+
+**Se acontecer de novo**, o roteiro é esse: feche o Power BI, apague
+`Power BI/.PBIP/*.SemanticModel/.pbi/cache.abf`, reabra e atualize.
+
+**Ainda não conferido com dado real.** Nenhuma tese tem medição, então as
+colunas seguem vazias — o que se prova agora é que o modelo abre, não que o
+número entra certo. Em especial `vencida`, que o pandas grava como
+`True`/`False` e está declarada `type logical`.
+
+**Mesmo defeito, ainda em aberto:** `f_transacao[taxas]` também é 100% vazia
+e está tipada como texto. Não quebra nada hoje, porque nenhuma medida a usa.
+Deixada como está de propósito, para não misturar outra mudança de tipo com
+esta correção.
 
 ### 0.2 O que vai para o git, e o que não vai
 
