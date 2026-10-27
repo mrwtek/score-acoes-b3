@@ -44,12 +44,23 @@ Power BI/
 - Os 11 relacionamentos, e — importante — **nenhum** dos três que a seção 1.7
   manda não criar.
 - As 32 medidas, com formatação aplicada (percentual, data, inteiro).
-- 4 das 6 telas: **Carteira**, **Desempenho contra benchmark**, **Ranking**
-  e **Saúde dos dados**.
+- As 6 telas: **Carteira**, **Desempenho contra benchmark**, **Ranking**,
+  **Saúde dos dados**, **Ficha do ativo** e **Diário de teses**.
 
-**O que falta**: as telas 3.4 (Ficha do ativo) e 3.5 (Diário de teses). Na
-tela de benchmark falta a segmentação por período — hoje só existe a de
-ticker.
+**Pendências conhecidas**, em ordem de quanto atrapalham:
+
+1. **As 4 medidas de tese não funcionam.** `Retorno da tese %`,
+   `Tese vs IBOV (p.p.)`, `Tese vs CDI (p.p.)` e `Dias restantes` fazem
+   `AVERAGE`/`SUM` sobre colunas que a importação tipou como **texto**. Veja
+   §0.3.
+2. **O parâmetro `PastaBI` não controla nada.** As 9 consultas têm o caminho
+   escrito dentro do M, por `Folder.Files`. A `fnLerBI` e o parâmetro existem
+   no modelo e não são usados. Veja §0.3.
+3. **Falta a segmentação por período** na tela de benchmark; sem ela as
+   medidas `base 100` nunca são reancoradas.
+4. **Os dois gráficos de rosca da Carteira se sobrepõem** em 222 px, e o da
+   direita encosta na borda da página.
+5. A Ficha do ativo usa **slicer de ticker, não drill-through** (§3.4).
 
 ### 0.1 Para abrir
 
@@ -58,9 +69,41 @@ mesma coisa em texto: dá para ver num diff do git o que mudou numa medida,
 coisa que o `.pbix` não permite por ser binário.
 
 O relatório aponta para o modelo por caminho relativo, então mover a pasta
-inteira não quebra nada. **Só o parâmetro `PastaBI` é absoluto**
-(`C:\Users\Dimlu\app-b3\exports\bi`): em outra máquina, mude o parâmetro em
-Transformar dados → Gerenciar Parâmetros.
+inteira não quebra nada. O caminho de `exports/bi` é que está preso a esta
+máquina — e em mais lugares do que deveria, como explica a seção seguinte.
+
+### 0.3 Duas coisas para arrumar no modelo
+
+Descobertas em 26/10/2026 lendo o TMDL, e nenhuma delas aparece como erro na
+tela.
+
+**As colunas de conferência de `f_tese` estão tipadas como texto.** O
+`Table.TransformColumnTypes` da consulta fixou `type text` em `retorno`,
+`ibov`, `cdi`, `vs_ibov`, `vs_cdi`, `dias_corridos`, `dias_restantes`,
+`preco_atual`, `medido_ate`, `vencimento` e `vencida`. A detecção automática
+acertou dentro do que sabia: as duas teses foram abertas no mesmo dia, ainda
+sem pregão para medir, então essas colunas chegaram **vazias** e o Power BI
+não tinha como adivinhar que são números.
+
+A consequência é que as 4 medidas que dependem delas não vão funcionar nem
+quando o dado chegar — o tipo já está gravado no modelo, e reimportar não
+re-detecta coluna existente. A correção é editar a consulta `f_tese` em
+Transformar dados e trocar o tipo dessas colunas para Número Decimal (e
+`vencimento` e `medido_ate` para Data). Vale esperar a primeira tese com
+medição, para conferir que o número entra certo.
+
+**O parâmetro `PastaBI` e a função `fnLerBI` não são usados por ninguém.** As
+9 consultas foram criadas pelo conector de Pasta, e cada uma carrega o
+caminho absoluto dentro do próprio M:
+
+```m
+Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+```
+
+Funciona igual nesta máquina. O preço aparece em outra: em vez de mudar um
+parâmetro, seriam 9 consultas para editar. Para ligar tudo ao parâmetro,
+troque o passo `Fonte` de cada consulta por `fnLerBI("<arquivo>.csv")` — é a
+mesma leitura, e foi para isso que os dois foram criados.
 
 ### 0.2 O que vai para o git, e o que não vai
 
@@ -615,18 +658,43 @@ somá-los — que é exatamente o que o P1-13 decidiu ao remover o `score_geral`
 Montada com a dispersão e a tabela, incluindo `Cobertura` e
 `Janela de reversão` ao lado das notas.
 
-### 3.4 Ficha do ativo — A FAZER
+### 3.4 Ficha do ativo — FEITA
 
-Drill-through por `dim_ativo[ticker]`. Linha de `Preço` no tempo; tabela de
-`f_fundamento` filtrada por `mais_recente = True`; `f_transacao` do papel;
-`f_tese` do papel.
+Cabeçalho, filtro de ticker, cartões (`Preço`, `Preço de tela`,
+`Retorno do ativo %`, `Score fundamentalista`, `Score de reversão`,
+`Cobertura`), linha de `Preço` no tempo, tabela de `f_fundamento` e tabela de
+`f_transacao`.
 
-### 3.5 Diário de teses — A FAZER
+Duas diferenças em relação ao que esta seção pedia:
 
-Tabela de `f_tese`: ticker, data de abertura, premissa, critério,
-`Dias restantes`, `Retorno da tese %`, `Tese vs IBOV (p.p.)`,
-`Tese vs CDI (p.p.)`, status.
-Filtro por `status`. Cartão com `Teses abertas`.
+- **Filtro de ticker em vez de drill-through.** Drill-through precisa de
+  `pageBinding` e de um filtro do tipo `Drillthrough`, estrutura que não
+  existe em nenhuma página deste relatório — montar seria escrever no escuro.
+  Converter no Desktop é rápido: arraste `dim_ativo[ticker]` para o campo
+  Drill-through do painel de Visualizações, com a página aberta.
+- **A tabela de fundamentos não filtra `mais_recente = True`.** Filtro
+  aplicado a um visual mora em `filterConfig`, e os únicos `filterConfig`
+  deste relatório estão vazios. Em vez disso, `mais_recente` entra como
+  coluna visível e a tabela sai ordenada por data decrescente, então o
+  registro corrente é a primeira linha. Com 7 datas por ticker, ver a série
+  também é informação.
+
+### 3.5 Diário de teses — FEITA
+
+Cabeçalho, filtro de `status`, cartão com `Teses abertas` e a tabela de
+`f_tese`: ticker, data de abertura, preço e score de abertura, horizonte,
+status, vencimento, dias restantes, retorno, `vs_ibov`, `vs_cdi`, premissa e
+critério.
+
+**As colunas de conferência entram como coluna, não pelas medidas.** As
+quatro medidas de tese fazem `AVERAGE`/`SUM` sobre colunas tipadas como texto
+e não funcionam — §0.3 explica por quê e como corrigir. Lidas como coluna, as
+mesmas informações aparecem corretamente; ficam vazias enquanto não houver
+pregão novo desde a abertura, e vazio aqui quer dizer "ainda não dá para
+medir", não zero.
+
+Quando o tipo for corrigido, troque as colunas `retorno`, `vs_ibov`,
+`vs_cdi` e `dias_restantes` pelas medidas equivalentes, que já existem.
 
 ### 3.6 Saúde dos dados — FEITA
 

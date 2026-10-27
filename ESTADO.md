@@ -200,20 +200,34 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
       e cultura pt-BR (é o que faz o decimal com vírgula entrar como número),
       `dim_calendario` marcada como tabela de data, os 11 relacionamentos —
       e nenhum dos três que o `POWERBI.md` §1.7 manda não criar —, as 32
-      medidas com formatação, e 4 das 6 telas: Carteira, Desempenho contra
-      benchmark, Ranking e Saúde dos dados.
+      medidas com formatação, e **as 6 telas**: Carteira, Desempenho contra
+      benchmark, Ranking, Saúde dos dados, Ficha do ativo e Diário de teses.
 
-      A tela de Saúde dos dados foi montada editando o `.PBIP` direto, sem
-      abrir o Power BI, clonando as estruturas dos visuais que já existiam no
+      As três últimas foram montadas editando o `.PBIP` direto, com o Power
+      BI fechado, clonando estruturas de visuais que já existiam no
       relatório. Validado por arquivo: JSON bem formado, nomes únicos, toda
       medida e coluna referenciada existe no modelo, nada fora dos
-      1920 × 1080. **Não validado:** como renderiza — isso só abrindo.
+      1920 × 1080, nenhum visual sobrepondo outro. **Não validado:** como
+      renderiza. A de Saúde dos dados foi conferida no Desktop e abriu certa;
+      as outras duas ainda não.
 
-      **Falta:** telas de Ficha do ativo (§3.4) e Diário de teses (§3.5),
-      mais a segmentação por período na tela de
-      benchmark. Essa última não é enfeite: as três medidas `base 100` usam
-      `ALLSELECTED(dim_calendario)`, então sem um filtro de data elas nunca
-      são reancoradas e o gráfico só sabe mostrar a série inteira.
+      **Pendências, da que mais atrapalha para a que menos:**
+      1. As 4 medidas de tese (`Retorno da tese %`, `Tese vs IBOV`,
+         `Tese vs CDI`, `Dias restantes`) fazem `AVERAGE`/`SUM` sobre colunas
+         que a importação tipou como **texto**, porque chegaram vazias — as
+         duas teses foram abertas no mesmo dia, sem pregão para medir.
+         Reimportar não conserta: o tipo já está gravado no modelo. Corrigir
+         na consulta `f_tese`, em Transformar dados. `POWERBI.md` §0.3.
+      2. O parâmetro `PastaBI` e a função `fnLerBI` não são usados por
+         ninguém: as 9 consultas carregam o caminho absoluto dentro do M,
+         via `Folder.Files`. Numa máquina nova seriam 9 consultas para
+         editar, em vez de um parâmetro.
+      3. Falta a segmentação por período na tela de benchmark. Não é
+         enfeite: as três medidas `base 100` usam
+         `ALLSELECTED(dim_calendario)`, então sem filtro de data elas nunca
+         são reancoradas e o gráfico só sabe mostrar a série inteira.
+      4. Os dois gráficos de rosca da Carteira se sobrepõem em 222 px, e o
+         da direita encosta na borda da página.
 
       **Versionamento decidido em 26/10/2026:** vai para o git só o `.PBIP/`,
       com os 41 arquivos de definição em texto. Ficam de fora o `.PBIX/` (o

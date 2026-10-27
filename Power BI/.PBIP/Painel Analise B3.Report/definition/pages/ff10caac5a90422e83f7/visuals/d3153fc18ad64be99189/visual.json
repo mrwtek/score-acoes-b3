@@ -1,0 +1,239 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "d3153fc18ad64be99189",
+  "position": {
+    "x": 76,
+    "y": 310,
+    "z": 3,
+    "height": 710,
+    "width": 1768,
+    "tabOrder": 3
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "ticker"
+                }
+              },
+              "queryRef": "f_tese.ticker",
+              "nativeQueryRef": "ticker"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "data_abertura"
+                }
+              },
+              "queryRef": "f_tese.data_abertura",
+              "nativeQueryRef": "data_abertura"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_tese"
+                        }
+                      },
+                      "Property": "preco_abertura"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_tese.preco_abertura)",
+              "nativeQueryRef": "preco_abertura"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_tese"
+                        }
+                      },
+                      "Property": "score_abertura"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_tese.score_abertura)",
+              "nativeQueryRef": "score_abertura"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_tese"
+                        }
+                      },
+                      "Property": "horizonte_dias"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_tese.horizonte_dias)",
+              "nativeQueryRef": "horizonte_dias"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "status"
+                }
+              },
+              "queryRef": "f_tese.status",
+              "nativeQueryRef": "status"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "vencimento"
+                }
+              },
+              "queryRef": "f_tese.vencimento",
+              "nativeQueryRef": "vencimento"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "dias_restantes"
+                }
+              },
+              "queryRef": "f_tese.dias_restantes",
+              "nativeQueryRef": "dias_restantes"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "retorno"
+                }
+              },
+              "queryRef": "f_tese.retorno",
+              "nativeQueryRef": "retorno"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "vs_ibov"
+                }
+              },
+              "queryRef": "f_tese.vs_ibov",
+              "nativeQueryRef": "vs_ibov"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "vs_cdi"
+                }
+              },
+              "queryRef": "f_tese.vs_cdi",
+              "nativeQueryRef": "vs_cdi"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "premissa"
+                }
+              },
+              "queryRef": "f_tese.premissa",
+              "nativeQueryRef": "premissa"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_tese"
+                    }
+                  },
+                  "Property": "criterio"
+                }
+              },
+              "queryRef": "f_tese.criterio",
+              "nativeQueryRef": "criterio"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "f_tese"
+                  }
+                },
+                "Property": "data_abertura"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

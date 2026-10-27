@@ -1,0 +1,174 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "b4211097663948889ae5",
+  "position": {
+    "x": 76,
+    "y": 840,
+    "z": 5,
+    "height": 180,
+    "width": 1768,
+    "tabOrder": 5
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_transacao"
+                    }
+                  },
+                  "Property": "id"
+                }
+              },
+              "queryRef": "f_transacao.id",
+              "nativeQueryRef": "id"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_transacao"
+                    }
+                  },
+                  "Property": "data"
+                }
+              },
+              "queryRef": "f_transacao.data",
+              "nativeQueryRef": "data"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_transacao"
+                    }
+                  },
+                  "Property": "tipo"
+                }
+              },
+              "queryRef": "f_transacao.tipo",
+              "nativeQueryRef": "tipo"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_transacao"
+                        }
+                      },
+                      "Property": "quantidade"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_transacao.quantidade)",
+              "nativeQueryRef": "quantidade"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_transacao"
+                        }
+                      },
+                      "Property": "preco"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_transacao.preco)",
+              "nativeQueryRef": "preco"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_transacao"
+                        }
+                      },
+                      "Property": "valor_bruto"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_transacao.valor_bruto)",
+              "nativeQueryRef": "valor_bruto"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_transacao"
+                        }
+                      },
+                      "Property": "valor_liquido"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_transacao.valor_liquido)",
+              "nativeQueryRef": "valor_liquido"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_transacao"
+                    }
+                  },
+                  "Property": "observacao"
+                }
+              },
+              "queryRef": "f_transacao.observacao",
+              "nativeQueryRef": "observacao"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "f_transacao"
+                  }
+                },
+                "Property": "data"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "2a190675d64e4bfa99c6",
+  "position": {
+    "x": 76,
+    "y": 130,
+    "z": 2,
+    "height": 150,
+    "width": 1768,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Teses abertas"
+                }
+              },
+              "queryRef": "_Medidas.Teses abertas",
+              "nativeQueryRef": "Teses abertas"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "aa3253214d0e47e9af2a",
+  "position": {
+    "x": 76,
+    "y": 620,
+    "z": 4,
+    "height": 200,
+    "width": 1768,
+    "tabOrder": 4
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_fundamento"
+                    }
+                  },
+                  "Property": "data"
+                }
+              },
+              "queryRef": "f_fundamento.data",
+              "nativeQueryRef": "data"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_fundamento"
+                    }
+                  },
+                  "Property": "mais_recente"
+                }
+              },
+              "queryRef": "f_fundamento.mais_recente",
+              "nativeQueryRef": "mais_recente"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_fundamento"
+                        }
+                      },
+                      "Property": "pl"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_fundamento.pl)",
+              "nativeQueryRef": "pl"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_fundamento"
+                        }
+                      },
+                      "Property": "pvp"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_fundamento.pvp)",
+              "nativeQueryRef": "pvp"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_fundamento"
+                        }
+                      },
+                      "Property": "roe"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_fundamento.roe)",
+              "nativeQueryRef": "roe"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_fundamento"
+                        }
+                      },
+                      "Property": "roic"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_fundamento.roic)",
+              "nativeQueryRef": "roic"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_fundamento"
+                        }
+                      },
+                      "Property": "margem_liquida"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_fundamento.margem_liquida)",
+              "nativeQueryRef": "margem_liquida"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_fundamento"
+                        }
+                      },
+                      "Property": "margem_ebitda"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_fundamento.margem_ebitda)",
+              "nativeQueryRef": "margem_ebitda"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_fundamento"
+                        }
+                      },
+                      "Property": "divida_patrimonio"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_fundamento.divida_patrimonio)",
+              "nativeQueryRef": "divida_patrimonio"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_fundamento"
+                        }
+                      },
+                      "Property": "cagr_receita_5a"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_fundamento.cagr_receita_5a)",
+              "nativeQueryRef": "cagr_receita_5a"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_fundamento"
+                        }
+                      },
+                      "Property": "cagr_lucro_5a"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_fundamento.cagr_lucro_5a)",
+              "nativeQueryRef": "cagr_lucro_5a"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "f_fundamento"
+                  }
+                },
+                "Property": "data"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

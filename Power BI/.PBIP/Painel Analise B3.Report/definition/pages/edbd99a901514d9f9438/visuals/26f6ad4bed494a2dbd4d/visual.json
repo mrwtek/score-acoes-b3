@@ -1,0 +1,108 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "26f6ad4bed494a2dbd4d",
+  "position": {
+    "x": 76,
+    "y": 130,
+    "z": 2,
+    "height": 150,
+    "width": 1768,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Preço"
+                }
+              },
+              "queryRef": "_Medidas.Preço",
+              "nativeQueryRef": "Preço"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Preço de tela"
+                }
+              },
+              "queryRef": "_Medidas.Preço de tela",
+              "nativeQueryRef": "Preço de tela"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Retorno do ativo %"
+                }
+              },
+              "queryRef": "_Medidas.Retorno do ativo %",
+              "nativeQueryRef": "Retorno do ativo %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Score fundamentalista"
+                }
+              },
+              "queryRef": "_Medidas.Score fundamentalista",
+              "nativeQueryRef": "Score fundamentalista"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Score de reversão"
+                }
+              },
+              "queryRef": "_Medidas.Score de reversão",
+              "nativeQueryRef": "Score de reversão"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Cobertura"
+                }
+              },
+              "queryRef": "_Medidas.Cobertura",
+              "nativeQueryRef": "Cobertura"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
