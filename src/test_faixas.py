@@ -10,10 +10,22 @@ Dados sinteticos, sem banco e sem API.
 from faixas import (
     CAP_CAGR_LUCRO,
     FAIXAS,
+    INDICADORES_REAIS,
+    INFLACAO_REFERENCIA,
     SELIC_REFERENCIA,
+    deflacionar,
     interpolar,
     nota,
 )
+
+
+def nominal(real, inflacao=INFLACAO_REFERENCIA):
+    """Inversa de deflacionar(): o CAGR nominal que vira `real` no extrato."""
+    return ((1 + real / 100) * (1 + inflacao / 100) - 1) * 100
+
+
+def perto(a, b, tol=1e-6):
+    return abs(a - b) < tol
 
 
 # --------------------------------------------------------------------------
@@ -42,11 +54,13 @@ def teste_02_ancoras_da_7a4_margens_e_7a5_crescimento():
     assert nota("margem_ebitda", 30.0) == 100.0
     assert nota("margem_ebitda", 20.0) == 80.0
 
+    # As ancoras de crescimento estao em termos REAIS e a entrada e nominal,
+    # entao a conferencia passa por nominal(): 15% real = 21,09% no extrato.
     for indicador in ("cagr_receita_5a", "cagr_lucro_5a"):
-        assert nota(indicador, 15.0) == 100.0
-        assert nota(indicador, 10.0) == 80.0
-        assert nota(indicador, 5.0) == 55.0
-        assert nota(indicador, 0.0) == 25.0
+        assert perto(nota(indicador, nominal(15.0)), 100.0)
+        assert perto(nota(indicador, nominal(10.0)), 80.0)
+        assert perto(nota(indicador, nominal(5.0)), 55.0)
+        assert perto(nota(indicador, nominal(0.0)), 25.0)
 
 
 def teste_03_ancoras_da_7a6_seguranca_sao_decrescentes():
@@ -145,15 +159,16 @@ def teste_11_patrimonio_liquido_negativo_tira_zero():
 
 
 def teste_12_cagr_de_lucro_e_capado():
-    assert nota("cagr_lucro_5a", 77.68) == nota("cagr_lucro_5a", CAP_CAGR_LUCRO), (
-        "o CAGR de 77,68% da PETR4 vem de ano-base deprimido; sem teto ele "
-        "entraria como crescimento espetacular"
+    """O cap existe, mas HOJE nao muda nota nenhuma -- ver teste 23."""
+    assert nota("cagr_lucro_5a", 77.68) == nota("cagr_lucro_5a", CAP_CAGR_LUCRO)
+    assert nota("cagr_lucro_5a", 77.68) == 100.0, (
+        "o CAGR de 77,68% da PETR4 vem de ano-base deprimido"
     )
-    assert nota("cagr_lucro_5a", 77.68) == 100.0
 
 
 def teste_13_cagr_de_receita_nao_e_capado_pelo_teto_do_lucro():
-    # receita nao explode do mesmo jeito; so o teto natural da ancora vale
+    # receita nao explode do mesmo jeito; so o teto natural da ancora vale.
+    # 26,49% nominal da BBAS3 = 20,12% real, acima da ancora de 15% real.
     assert nota("cagr_receita_5a", 26.49) == 100.0, "BBAS3 real"
 
 
@@ -194,6 +209,80 @@ def teste_17_interpolar_funciona_sozinha():
 def teste_18_referencias_macro_estao_declaradas():
     assert SELIC_REFERENCIA > 0, "7A.2 pede a ancora explicita, nao numero magico"
     assert CAP_CAGR_LUCRO == 30.0
+    assert INFLACAO_REFERENCIA == 5.30, (
+        "IPCA medio de 5 anos, serie 433 do SGS/BCB (out/2021 a set/2026). "
+        "Era 4,5 chutado; se mudar aqui, toda nota de crescimento se move"
+    )
+
+
+# --------------------------------------------------------------------------
+# 19 a 23. Correcao pela inflacao (opcao A, 26/10/2026)
+# --------------------------------------------------------------------------
+def teste_19_empatar_com_a_inflacao_nao_e_crescer():
+    """O caso que motivou a mudanca inteira.
+
+    Empresa cuja receita subiu exatamente a inflacao esta parada em termos
+    reais. A 7A.2 chama isso de encolhimento; a regua nominal dava 56,5.
+    """
+    assert perto(nota("cagr_receita_5a", INFLACAO_REFERENCIA), 25.0), (
+        "crescer o tanto da inflacao voltou a valer nota de aprovacao"
+    )
+    # e ficar abaixo da inflacao vale menos ainda
+    assert nota("cagr_receita_5a", 2.0) < 25.0
+
+
+def teste_20_deflacionar_nao_e_subtrair():
+    # 21,09% nominal com 5,30% de inflacao da 15,00% real, nao 15,79%
+    assert perto(deflacionar(21.09), 15.0, tol=0.01)
+    assert deflacionar(21.09) < 21.09 - INFLACAO_REFERENCIA, (
+        "a conta virou subtracao: os dois percentuais compoem"
+    )
+    assert deflacionar(INFLACAO_REFERENCIA) == 0.0 or perto(
+        deflacionar(INFLACAO_REFERENCIA), 0.0)
+    # ausente continua ausente
+    assert deflacionar(None) is None
+    assert deflacionar(float("nan")) != deflacionar(float("nan"))
+
+
+def teste_21_so_crescimento_e_deflacionado():
+    """Razoes do mesmo periodo nao levam inflacao: ela se cancela."""
+    assert INDICADORES_REAIS == ("cagr_receita_5a", "cagr_lucro_5a")
+
+    assert nota("roe", 15.0) == 80.0, "ROE foi deflacionado e nao devia"
+    assert nota("roa", 8.0) == 80.0
+    assert nota("roic", 15.0) == 80.0
+    assert nota("margem_liquida", 12.0) == 80.0
+    assert nota("margem_ebitda", 20.0) == 80.0
+    assert nota("divida_patrimonio", 0.6) == 80.0
+
+
+def teste_22_a_nota_de_crescimento_continua_sem_olhar_o_universo():
+    """O aceite do P1-11 nao pode ter sido quebrado pela correcao.
+
+    Deflacionar usa uma constante, nao o universo. Se um dia alguem trocar
+    INFLACAO_REFERENCIA por uma media da whitelist, este teste nao pega --
+    mas o teste_24 do test_scoring.py pega.
+    """
+    assert nota("cagr_receita_5a", 18.49) == nota("cagr_receita_5a", 18.49)
+    assert perto(nota("cagr_receita_5a", 18.49), 90.10, tol=0.01), (
+        "WEGE3 cresceu 18,49% nominal = 12,53% real. Essa nota vale com 10 ou "
+        "com 30 tickers na lista, e continua valendo em dezembro"
+    )
+
+
+def teste_23_o_cap_do_lucro_hoje_nao_muda_nota_nenhuma():
+    """Registra uma verdade incomoda, para ninguem confiar no que nao protege.
+
+    O cap e 30% REAL e a ancora de cima e 15% REAL. Tudo acima de 15 ja tira
+    100, entao cortar 68% para 30% nao altera resultado. O cap so passaria a
+    valer se alguem subisse a ancora de cima acima de 30.
+    """
+    sem_cap = interpolar(FAIXAS["cagr_lucro_5a"], deflacionar(77.68))
+    com_cap = nota("cagr_lucro_5a", 77.68)
+    assert sem_cap == com_cap == 100.0, (
+        "se estes passarem a divergir, o cap virou logica de verdade e o "
+        "comentario do faixas.py precisa parar de chamar ele de protecao"
+    )
 
 
 if __name__ == "__main__":
@@ -230,6 +319,18 @@ if __name__ == "__main__":
 
     print("\nNote 14,9 -> 15,0: no degrau a nota pula 25 pontos por 0,1 de ROE.")
     print("Interpolado, a mesma variacao vale meio ponto de nota.")
+
+    print("\n\nTabela de conferencia manual -- nominal vs real no crescimento:\n")
+    print(f"IPCA de referencia: {INFLACAO_REFERENCIA:.2f}% ao ano\n")
+    print(f"{'nominal':>9s} {'real':>8s} {'antes':>8s} {'agora':>8s} {'dif':>7s}")
+    for nom in (0.0, 2.0, 5.30, 8.0, 10.0, 15.0, 18.49, 21.09, 26.49, 32.89):
+        real = deflacionar(nom)
+        antes = interpolar(FAIXAS["cagr_receita_5a"], nom)  # como era: nominal direto
+        agora = nota("cagr_receita_5a", nom)
+        print(f"{nom:8.2f}% {real:7.2f}% {antes:8.1f} {agora:8.1f} {agora - antes:+7.1f}")
+
+    print("\nA linha de 5,30% e o motivo da mudanca: crescer o tanto da")
+    print("inflacao e ficar parado, e isso tirava 56,5 de nota.")
 
     print("\n\nIndicadores da carteira real em 14/09/2026:\n")
     reais = [

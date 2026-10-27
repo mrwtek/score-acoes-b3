@@ -529,3 +529,54 @@ existindo como tabela materializada, em vez de ser calculada on-the-fly.
 
 **Por quê:** simplicidade de leitura no dashboard. Recalcular preço médio a
 partir de todo o histórico a cada consulta é desnecessário nesta escala.
+---
+
+## Crescimento é pontuado em termos reais, não nominais (26/10/2026)
+
+**Decisão:** os dois CAGR são deflacionados pela inflação antes de pontuar.
+`INFLACAO_REFERENCIA` passou de 4,5 (chutado, e sem uso em cálculo nenhum)
+para **5,30%** — o IPCA médio anualizado de 5 anos, medido na série 433 do
+SGS/BCB: 29,47% acumulado entre out/2021 e set/2026.
+
+**Por quê:** a régua nominal premiava repasse de preço. Empresa cuja receita
+subiu 5,30% ao ano — exatamente a inflação, portanto parada em termos reais —
+tirava **56,5** de nota. A própria seção 7A.2 do PRD chama isso de
+encolhimento. O sintoma visível era a categoria ter parado de discriminar:
+6 de 9 tickers acima do teto de 15% no CAGR de receita, 5 de 9 no de lucro,
+e 22% de todas as notas de categoria exatamente em 100,0.
+
+**Por que deflacionar o indicador em vez de subir as âncoras.** As duas contas
+dão o mesmo número — conferido, diferença abaixo de 0,1 ponto. A escolha é de
+onde a inflação entra:
+
+- deflacionando, a tabela de âncoras continua dizendo uma relação econômica
+  ("15% real = 100"), e revisar a inflação mexe numa constante;
+- inflando as âncoras, a tabela vira `(21.09, 100.0)`, que não diz nada
+  sozinho, e toda revisão de inflação é uma edição do `FAIXAS` — justamente o
+  arquivo que o P1-11 criou para ser estável.
+
+O custo é que o CAGR usado no score deixa de bater com o que se lê no
+Investidor10. O valor nominal continua no banco, intacto.
+
+**Descartada:** esticar o teto para 25% sem âncora econômica. Medido, tira os
+empates no topo mas deixa a amplitude igual à de antes (83,8 contra 83,3) —
+comprime embaixo o que descomprime em cima. Troca um artefato por outro.
+
+**Por que o deflator é fixo e não puxado do BCB a cada rodada.** Medido na
+carteira real: variar o deflator de 4,50% a 7,05% — a faixa inteira que o IPCA
+de 5 anos percorreu nos últimos 17 anos — move o `score_fundamentalista` em no
+máximo **4,3 pontos**, e não muda a ordem do ranking entre 4,50% e 5,89%. Como
+a precisão não compensa, vale a simplicidade: um deflator dinâmico faria a nota
+se mexer todo mês sem a empresa ter mudado, que é exatamente o ruído que o
+P1-11 acabou de remover. Pendência Q8 do PRD: revisar quando o IPCA de 5 anos
+sair da faixa de 4,5% a 6,5%.
+
+**Efeito medido:** notas de categoria em 100,0 caíram de 22% para 15%; a
+amplitude de crescimento subiu de 83,3 para 91,9; uma troca de posição no
+ranking (ISAE4 passou a ITUB4). Foi barato fazer agora porque o `snapshots.py`
+ainda não existe — não há histórico de score para invalidar. Depois que existir
+e acumular meses, trocar a régua passa a custar caro.
+
+**Limitação conhecida:** não sabemos a janela exata que a BolsAI usa no CAGR de
+5 anos, então o deflator é aproximado. Um erro de um ano na janela vale 1 a 2
+pontos de nota — irrelevante, pela medição de sensibilidade acima.

@@ -31,21 +31,65 @@ ANCORAGEM AO CUSTO DE CAPITAL BRASILEIRO (7A.2)
 As faixas nao sao copiadas de tabela americana. ROE de 12% nos EUA e
 aceitavel; aqui, com Selic de dois digitos, e empresa que rende menos que
 titulo publico sem o risco de acao.
+
+CRESCIMENTO E MEDIDO EM TERMOS REAIS
+------------------------------------
+Os dois CAGR chegam NOMINAIS da BolsAI e sao deflacionados antes de pontuar.
+As ancoras de crescimento estao em termos REAIS: 15% ali quer dizer 15% acima
+da inflacao, nao 15% no extrato.
+
+Sem isso a regua premiava repasse de preco. Medido em 26/10/2026: empresa com
+receita crescendo 5,30% ao ano -- exatamente a inflacao do periodo, portanto
+parada em termos reais -- tirava nota 56,5. A propria 7A.2 chama isso de
+encolhimento. Agora tira 25.
+
+Por que deflacionar o indicador em vez de subir as ancoras: as duas contas dao
+o mesmo numero, mas assim a tabela de ancoras continua dizendo uma relacao
+economica ("15% real = 100") em vez de um numero calibrado ("21,09% = 100"),
+e revisar a inflacao mexe numa constante, nunca no FAIXAS.
 """
 
-# Referencias macro que ancoram as faixas. Nao sao usadas no calculo ainda --
-# estao aqui para a revisao das faixas ser uma decisao consciente, e nao um
-# numero magico espalhado pelo codigo (7A.2).
+# Referencias macro que ancoram as faixas (7A.2). Estao aqui para a revisao
+# ser uma decisao consciente, e nao um numero magico espalhado pelo codigo.
+# SELIC_REFERENCIA ainda e so documentacao; INFLACAO_REFERENCIA entra no
+# calculo desde 26/10/2026, em deflacionar().
 #
 # Selic meta de 01/10/2026, serie 4189 do SGS/BCB. A serie diaria ja esta na
 # tabela `indices`, entao da para conferir se saiu do lugar.
 # Pendencia Q8 do PRD: com que gatilho revisar as faixas quando a Selic mudar.
 SELIC_REFERENCIA = 13.65
-INFLACAO_REFERENCIA = 4.5
 
-# Teto do CAGR de lucro (7A.5). Se o ano-base teve lucro perto de zero, o CAGR
-# explode: empresa que saiu de R$ 1 mi para R$ 50 mi aparece como crescimento
-# espetacular quando so normalizou. A PETR4 chega com 77,68% por esse motivo.
+# IPCA medio anualizado dos ultimos 5 anos (out/2021 a set/2026), serie 433 do
+# SGS/BCB: 29,47% acumulado = 5,30% ao ano. Era 4,5 aqui, numero chutado e nao
+# usado em conta nenhuma; desde a opcao A de 26/10/2026 ele entra no calculo.
+#
+# FIXO de proposito, nao puxado do BCB a cada rodada. Deflator dinamico faria a
+# nota se mexer todo mes sem a empresa ter mudado -- o ruido que o P1-11 acabou
+# de tirar. E a precisao nao compensa: medido na carteira real, variar o
+# deflator de 4,50% a 7,05% (a faixa inteira dos ultimos 17 anos) move o
+# score_fundamentalista em no maximo 4,3 pontos e nao mexe na ordem do ranking
+# entre 4,50% e 5,89%.
+#
+# Pendencia Q8 do PRD: com que gatilho revisar. Sugestao: quando o IPCA de 5
+# anos sair da faixa de 4,5% a 6,5%, conferir aqui.
+INFLACAO_REFERENCIA = 5.30
+
+# Indicadores que chegam nominais e sao deflacionados antes de pontuar. Os
+# outros (ROE, margens, divida/PL) ja sao razoes entre valores do mesmo
+# periodo, entao a inflacao se cancela e nao ha o que corrigir.
+INDICADORES_REAIS = ("cagr_receita_5a", "cagr_lucro_5a")
+
+# Teto do CAGR de lucro (7A.5), em termos REAIS -- aplicado depois de
+# deflacionar, para ficar no mesmo espaco das ancoras.
+#
+# Se o ano-base teve lucro perto de zero, o CAGR explode: empresa que saiu de
+# R$ 1 mi para R$ 50 mi aparece como crescimento espetacular quando so
+# normalizou. A PETR4 chega com 77,68% por esse motivo.
+#
+# ATENCAO: hoje este teto NAO muda nota nenhuma. A ancora de cima e 15% real e
+# tudo acima dela ja tira 100, entao cortar 68% para 30% nao altera resultado.
+# Ele so passaria a valer se a ancora de cima subisse acima de 30. Esta coberto
+# pelo teste 23 do test_faixas.py, para ninguem confiar no que nao protege.
 #
 # A 7A pede tambem DESCARTAR o valor quando o lucro do ano-base for <= 0. Isso
 # NAO e implementavel: a BolsAI devolve o CAGR pronto, sem o lucro do ano-base.
@@ -75,6 +119,10 @@ FAIXAS = {
 
     # 7A.5 crescimento. Receita pesa mais que lucro por ser menos manipulavel
     # contabilmente (o peso esta no scoring.py).
+    #
+    # ESTES VALORES SAO REAIS, ja descontada a inflacao. A entrada da BolsAI e
+    # nominal e nota() deflaciona antes de chegar aqui. Com INFLACAO_REFERENCIA
+    # de 5,30%, 15% real equivale a 21,09% nominal.
     "cagr_receita_5a": ((-10.0, 0.0), (0.0, 25.0), (5.0, 55.0), (10.0, 80.0), (15.0, 100.0)),
     "cagr_lucro_5a": ((-10.0, 0.0), (0.0, 25.0), (5.0, 55.0), (10.0, 80.0), (15.0, 100.0)),
 
@@ -104,6 +152,18 @@ def interpolar(ancoras, valor):
     return ultima_nota
 
 
+def deflacionar(nominal, inflacao=INFLACAO_REFERENCIA):
+    """Converte crescimento nominal em real: (1+n)/(1+i) - 1, em pontos %.
+
+    Nao e subtracao. Crescer 21,09% com inflacao de 5,30% nao e 15,79% real, e
+    15,00% -- a diferenca vem de que os dois percentuais compoem, e ela cresce
+    rapido com a inflacao brasileira.
+    """
+    if nominal is None or nominal != nominal:  # None ou NaN
+        return nominal
+    return ((1 + nominal / 100) / (1 + inflacao / 100) - 1) * 100
+
+
 def nota(indicador, valor):
     """Nota 0-100 do indicador, ou None se nao der para pontuar.
 
@@ -118,6 +178,11 @@ def nota(indicador, valor):
         return None
 
     valor = float(valor)
+
+    # Crescimento entra nominal e e pontuado em termos reais. O cap vem depois
+    # de deflacionar, para os dois viverem no mesmo espaco das ancoras.
+    if indicador in INDICADORES_REAIS:
+        valor = deflacionar(valor)
 
     if indicador == "cagr_lucro_5a":
         valor = min(valor, CAP_CAGR_LUCRO)

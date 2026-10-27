@@ -122,6 +122,30 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       não têm. Ficam contados em `meta_exportacao.csv` em vez de entrar com
       nota inventada.
 
+- [x] **AFINAR-FAIXAS** as âncoras de crescimento viraram **termos reais**.
+      Os dois CAGR chegam nominais da BolsAI e `faixas.nota()` deflaciona
+      antes de interpolar; as âncoras não mudaram de número, mudaram de
+      significado — 15% ali agora quer dizer 15% acima da inflação.
+      `INFLACAO_REFERENCIA` foi de 4,5 (chutado, e não usado em conta nenhuma)
+      para **5,30%**, que é o IPCA médio de 5 anos medido na série 433 do
+      SGS/BCB (29,47% acumulado entre out/2021 e set/2026).
+
+      **O caso que motivou:** empresa crescendo 5,30% ao ano — exatamente a
+      inflação, portanto parada em termos reais — tirava **56,5**. A 7A.2
+      chama isso de encolhimento. Agora tira 25.
+
+      Efeito medido: notas de categoria em 100,0 caíram de 22% para 15%; a
+      amplitude de crescimento subiu de 83,3 para 91,9; uma troca no ranking
+      (ISAE4 passou a ITUB4). Escolhido deflacionar o indicador em vez de subir
+      as âncoras — as duas contas dão o mesmo número, a diferença é de onde a
+      inflação entra. Ver DECISOES.md.
+
+      **Deflator fixo de propósito**, não puxado do BCB a cada rodada: medido,
+      variar o deflator de 4,50% a 7,05% (a faixa inteira dos últimos 17 anos)
+      move o score em no máximo 4,3 pontos e não mexe na ordem entre 4,50% e
+      5,89%. Um deflator dinâmico custaria notas se mexendo todo mês sem a
+      empresa ter mudado — o ruído que o P1-11 acabou de tirar.
+
 ### Limpeza de 26/10/2026 (ao retomar o projeto)
 Três coisas estavam fora do lugar depois de ~7 semanas parado:
 - `ESTADO.md` no disco tinha regredido para a versão de 02/09; restaurado da
@@ -136,7 +160,7 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] nada — próximas são **AFINAR-FAIXAS** e **P1-2**
+- [ ] nada — próxima é **P1-2**
 
 ---
 
@@ -149,15 +173,6 @@ Todo o bloco de score vem **antes** do P1-4, para não gravar snapshots numa
 escala que será trocada.
 
 ### Bloco de score (o miolo da revisão)
-- [ ] **AFINAR-FAIXAS** as âncoras de crescimento estão frouxas. **6 de 9
-      tickers passam do teto de 15%** no CAGR de receita e 5 de 9 no de lucro,
-      então a categoria vira 100 para quase todo mundo e para de discriminar.
-      A causa é que as faixas são nominais: com inflação de 4,5% (7A.2), 15%
-      nominal é ~10% real e não devia ser teto. No total, 22% das notas de
-      categoria estão em 100,0 — a maior parte em crescimento e margens.
-      *Sugestão:* subir o teto do CAGR para 20–25%, ou descontar a inflação.
-      Decisão sua: mexer nas âncoras é mexer na régua, e isso quebra a
-      comparabilidade com os snapshots já gravados.
 - [ ] **P1-2** winsorização (p5/p95) + z-score no valuation
       *Aceite:* o pior colocado deixa de tirar exatamente 0.0.
 - [ ] **P1-14** flag `premio_negativo` quando earnings yield < Selic

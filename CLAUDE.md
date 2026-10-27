@@ -33,7 +33,8 @@ trade-off antes de decidir por mim.
       banco.py                SQLite: criar_tabelas, salvar/registrar
       main.py                 loop de coleta em thread + CLI
       gerenciar_posicoes.py   CLI de carteira (buy/sell/show)
-      faixas.py               âncoras absolutas por indicador + interpolação.
+      faixas.py               âncoras absolutas por indicador + interpolação,
+                              mais o deflator que põe o CAGR em termos reais.
                               Não depende do universo (P1-11)
       scoring.py              as fórmulas do score. NÃO lê o banco: recebe
                               DataFrames e devolve DataFrames
@@ -172,7 +173,7 @@ universo. Isso é o que torna os snapshots comparáveis ao longo do tempo.
 
     rentabilidade   ROIC 40% | ROE 35% | ROA 25%          absoluto
     margens         líquida 60% | EBITDA 40%              absoluto
-    crescimento     CAGR receita 60% | CAGR lucro 40%     absoluto
+    crescimento     CAGR receita 60% | CAGR lucro 40%     absoluto, REAL
     seguranca       dívida/patrimônio 100%                absoluto
     valuation       E/P 50% | B/P 50%                     relativo
 
@@ -208,9 +209,17 @@ Peso das cinco categorias: 20% cada — número meu, não do PRD, ver DECISOES.m
 - Escala sempre 0–100. Faixas ancoradas ao custo de capital brasileiro
   (`SELIC_REFERENCIA` e `INFLACAO_REFERENCIA` em `faixas.py`; a tabela
   `config_scoring` do PRD ainda não existe), não copiadas de tabela americana.
-- **Aberto:** as âncoras de crescimento são nominais e estão frouxas — 6 de 9
-  tickers passam do teto de 15% no CAGR de receita. Num país com inflação de
-  4,5%, 15% nominal não devia ser o teto. Ver ESTADO.md.
+- **Crescimento é medido em termos reais.** Os dois CAGR chegam nominais da
+  BolsAI e `faixas.nota()` deflaciona antes de pontuar, por
+  `(1+nominal)/(1+inflação) − 1` — composição, não subtração. As âncoras de
+  crescimento estão em termos **reais**: 15% ali quer dizer 15% acima da
+  inflação, o que com `INFLACAO_REFERENCIA = 5,30%` equivale a 21,09% no
+  extrato. Sem isso a régua premiava repasse de preço: empresa crescendo
+  exatamente a inflação tirava 56,5, que a 7A.2 chama de encolhimento.
+  O deflator é **fixo de propósito** — dinâmico faria a nota se mexer todo
+  mês sem a empresa ter mudado, e a precisão não compensa (variar de 4,50% a
+  7,05% move o score em no máximo 4,3 pontos). Só os CAGR são deflacionados;
+  ROE, margens e dívida/PL são razões do mesmo período e a inflação se cancela.
 
 Desse bloco falta só o **P1-2** (winsorização + z-score no valuation) e o
 **P1-14** (flag `premio_negativo`). Confira no `ESTADO.md` antes de assumir
