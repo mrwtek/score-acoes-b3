@@ -209,12 +209,14 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
       `ALLSELECTED(dim_calendario)`, então sem um filtro de data elas nunca
       são reancoradas e o gráfico só sabe mostrar a série inteira.
 
-      **Decisão pendente, sua:** `.PBIP/` e `.PBIX/` são o mesmo painel e os
-      dois estão fora do `.gitignore` — versionar ambos faz cada alteração
-      entrar duas vezes e permite que divirjam em silêncio. Já `cache.abf` e
-      `localSettings.json` não deveriam ser versionados de jeito nenhum: um é
-      cache de dados que se regenera, o outro é assinatura presa a esta
-      máquina e a este usuário. Ver `POWERBI.md` §0.2.
+      **Versionamento decidido em 26/10/2026:** vai para o git só o `.PBIP/`,
+      com os 41 arquivos de definição em texto. Ficam de fora o `.PBIX/` (o
+      mesmo painel em binário, que entraria em duplicidade e poderia divergir
+      em silêncio), o `cache.abf` (cache que se regenera) e o
+      `localSettings.json` (assinatura presa a esta máquina). Regras no
+      `.gitignore`, razões no `POWERBI.md` §0.2.
+      Quem clonar o repositório abre o `.pbip` com o painel inteiro e sem
+      dados: `exports/bi/` também é gerado e fica fora do git.
 
 - [ ] próxima tarefa de código: **P1-14**
 

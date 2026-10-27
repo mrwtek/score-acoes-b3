@@ -61,30 +61,37 @@ inteira não quebra nada. **Só o parâmetro `PastaBI` é absoluto**
 (`C:\Users\Dimlu\app-b3\exports\bi`): em outra máquina, mude o parâmetro em
 Transformar dados → Gerenciar Parâmetros.
 
-### 0.2 O que não deve ir para o git
+### 0.2 O que vai para o git, e o que não vai
 
-Dois arquivos dentro de `.PBIP/*/.pbi/`:
+**Decidido em 26/10/2026: versiona-se o `.PBIP/`.** São 41 arquivos de
+definição — o modelo semântico em TMDL (uma tabela por arquivo) e o
+relatório em JSON (uma pasta por página, um arquivo por visual). Tudo texto,
+então uma mudança de medida aparece no diff.
 
-- `cache.abf` — cache dos dados do modelo (177 KB hoje, e cresce junto com a
-  série). É gerado de novo sozinho.
-- `localSettings.json` — guarda uma assinatura criptografada presa a esta
-  máquina e a este usuário. Em outro computador ela não vale nada.
-
-Sugestão para o `.gitignore`:
+Três coisas ficam de fora, pelo `.gitignore`:
 
 ```
+Power BI/.PBIX/
 Power BI/.PBIP/**/.pbi/cache.abf
 Power BI/.PBIP/**/.pbi/localSettings.json
 ```
 
-**Sobre o `.pbix`:** ele e o `.pbip` são o mesmo painel. Versionar os dois
-significa que toda alteração entra duas vezes, uma legível e outra como
-binário opaco — e, pior, os dois podem divergir sem aviso se um dia você
-salvar só um. O caminho mais limpo é versionar o `.PBIP/` e ignorar o
-`.PBIX/`, gerando o `.pbix` só quando precisar mandar o arquivo para alguém.
-Se você preferir manter os dois versionados, a regra passa a ser salvar
-sempre nos dois formatos na mesma sessão. É escolha sua — hoje nenhum dos
-dois está no `.gitignore`.
+- **`.PBIX/`** é o mesmo painel em binário. Versionar os dois faz cada
+  alteração entrar duas vezes, uma legível e outra opaca, e deixa os formatos
+  divergirem em silêncio se um dia só um for salvo. Gere o `.pbix` quando
+  precisar mandar o arquivo para alguém.
+- **`cache.abf`** é cache dos dados do modelo (177 KB em 26/10/2026, e cresce
+  junto com a série). É gerado de novo sozinho.
+- **`localSettings.json`** guarda uma assinatura criptografada presa a esta
+  máquina e a este usuário. Em outro computador ela não vale nada.
+
+O `editorSettings.json` entra: são só preferências do editor, sem caminho nem
+segredo.
+
+**Consequência prática:** quem clonar o repositório abre o `.pbip` e tem o
+painel inteiro, mas sem dados — o `exports/bi/` também está fora do git, por
+ser gerado. Rode `python src/exportar_bi.py`, aponte o parâmetro `PastaBI`
+para a sua pasta e atualize.
 
 ---
 
