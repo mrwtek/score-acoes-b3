@@ -195,6 +195,22 @@ escala que será trocada.
 - [ ] **P1-5** `carteira.py` — lucro absoluto, relativo, peso, resultado
       realizado
 - [ ] **P1-6** `sinais.py` — compra/manter/venda com justificativa
+- [ ] **VERSAO-SCORE** gravar sob qual metodologia cada score foi calculado:
+      coluna no `f_score.csv` do `exportar_bi.py` e, quando o P1-4 existir,
+      também na tabela de snapshots. Irmão do P1-4 — faça os dois juntos.
+
+      **Por que, medido em 26/10/2026:** o AFINAR-FAIXAS (commit e95715a)
+      entrou com o snapshot do dia já gravado na escala anterior. Crescimento
+      caiu em 9 dos 10 tickers, ITSA4 foi de 55,0 para 47,2, e a ordem do
+      ranking mudou num par — ITUB4 era 5º e virou 6º, trocando com ISAE4.
+      Resolvido reexportando (o append é idempotente por dia), mas só deu
+      para resolver assim porque havia **um** snapshot.
+      Com a série mais longa, notas de réguas diferentes vão conviver no
+      mesmo gráfico de linha parecendo evolução do papel quando são troca de
+      régua. É o mesmo risco que a nota do topo desta seção antecipa, só que
+      do lado de fora do banco.
+      *Aceite:* um gráfico de score ao longo do tempo consegue separar — ou
+      ao menos marcar — o ponto em que a metodologia mudou.
 - [ ] **P1-4** `snapshots_score` + job diário
 - [ ] **P1-7** dashboard Streamlit (Visão geral, Ranking, Carteira)
 
