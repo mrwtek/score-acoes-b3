@@ -234,14 +234,22 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
       `f_transacao[taxas]` tem o mesmo defeito e segue como texto, de
       propósito — não quebra nada e não se mistura com esta correção.
 
+      **Layout uniformizado em 26/10/2026.** As seis telas seguem a mesma
+      grade: margem 76 dos dois lados, topo em 40, base máxima em 1020, 24
+      de respiro entre blocos; tabela em fonte 11, rótulo de dado em 10. As
+      três primeiras foram alinhadas a ela — antes tinham quatro margens
+      esquerdas diferentes, os dois gráficos de rosca sobrepostos em 222 px
+      e visuais encostados na borda. `POWERBI.md` §0.5.
+
       **Pendências, da que mais atrapalha para a que menos:**
       1. Falta a segmentação por período na tela de benchmark. Não é
          enfeite: as três medidas `base 100` usam
          `ALLSELECTED(dim_calendario)`, então sem filtro de data elas nunca
          são reancoradas e o gráfico só sabe mostrar a série inteira.
-      2. Os dois gráficos de rosca da Carteira se sobrepõem em 222 px, e o
-         da direita encosta na borda da página.
-      3. O slicer da tela de benchmark está com seleção salva em `ITUB4`.
+      2. O slicer da tela de benchmark está com seleção salva em `ITUB4`.
+      3. Eixo e legenda ficaram no tamanho padrão de fonte: os nomes desses
+         objetos de formatação não aparecem em nenhum visual do relatório,
+         então não havia o que clonar com segurança.
 
       **Versionamento decidido em 26/10/2026:** vai para o git só o `.PBIP/`,
       com os 41 arquivos de definição em texto. Ficam de fora o `.PBIX/` (o

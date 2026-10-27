@@ -51,11 +51,33 @@ Power BI/
 
 1. **Falta a segmentação por período** na tela de benchmark; sem ela as
    medidas `base 100` nunca são reancoradas.
-2. **Os dois gráficos de rosca da Carteira se sobrepõem** em 222 px, e o da
-   direita encosta na borda da página.
-3. A Ficha do ativo usa **slicer de ticker, não drill-through** (§3.4).
-4. O slicer da tela de benchmark está com **seleção salva em `ITUB4`** —
+2. A Ficha do ativo usa **slicer de ticker, não drill-through** (§3.4).
+3. O slicer da tela de benchmark está com **seleção salva em `ITUB4`** —
    aquela página abre filtrada nesse papel.
+4. **Eixo e legenda ficaram no tamanho padrão** de fonte (§0.5).
+
+### 0.5 A grade do relatório
+
+As seis telas seguem a mesma grade, em 1920 × 1080:
+
+| medida | valor |
+|---|---|
+| margem esquerda e direita | 76 (largura útil 1768) |
+| topo do primeiro bloco | 40 |
+| base do último bloco | no máximo 1020 |
+| respiro entre blocos | 24 |
+
+Tamanhos de fonte: tabela **11**, cabeçalho de tabela **11**, rótulo de dado
+**10**, título de tela **20pt**, texto de apoio **10pt**.
+
+Vale manter isso ao acrescentar visual: a grade é o que faz as telas
+parecerem o mesmo relatório. As três primeiras foram alinhadas a ela em
+26/10/2026 — antes tinham quatro margens esquerdas diferentes, dois gráficos
+de rosca sobrepostos em 222 px e visuais encostados na borda.
+
+**Eixo e legenda não foram tocados.** Os nomes desses objetos de formatação
+não aparecem em nenhum visual deste relatório, então escrevê-los no JSON
+seria adivinhar. Saem rápido pelo painel de formatação, se incomodarem.
 
 ### 0.1 Para abrir
 
