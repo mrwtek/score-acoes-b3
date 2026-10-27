@@ -98,7 +98,7 @@ ajustado** das ações (considera proventos; o Ibovespa é índice de retorno
 total, então comparar com preço cru subestimaria as ações).
 
 ### `python exportar_bi.py`
-**O que faz:** gera a camada de BI — oito CSVs em `exports/bi/` para o Power
+**O que faz:** gera a camada de BI — nove CSVs em `exports/bi/` para o Power
 BI ler. Não altera o banco, só lê.
 **Quando rodar:** antes de abrir (ou atualizar) o Power BI, depois de uma
 coleta ou de um backfill.
@@ -196,7 +196,7 @@ conversão da data no fuso da B3, normalização de ticker, reexecução sem
 duplicar, e descarte de pontos sem data ou sem fechamento.
 **Quando rodar:** depois de qualquer mudança em `banco.py` que toque em
 `cotacoes_historicas`, ou em `coletor.py` que toque em `buscar_historico()`.
-**Comportamento esperado:** `15/15 testes passaram`, mais uma tabela mostrando
+**Comportamento esperado:** `21/21 testes passaram`, mais uma tabela mostrando
 o que a API manda e o que vai (ou não) para o banco em cada caso de borda.
 Usa banco temporário e não chama a API — não toca no `data/acoes.db`.
 
@@ -205,7 +205,7 @@ Usa banco temporário e não chama a API — não toca no `data/acoes.db`.
 estão certos — conversão do formato do BCB, produtório vs soma na taxa
 diária, variação percentual do Ibovespa, reexecução sem duplicar.
 **Quando rodar:** depois de mexer em `indices.py` ou em `salvar_indices()`.
-**Comportamento esperado:** `18/18 testes passaram`, mais uma tabela que
+**Comportamento esperado:** `19/19 testes passaram`, mais uma tabela que
 mostra o erro de somar taxa diária em vez de compor, crescendo com o prazo.
 As três linhas "pulando ponto que nao consegui converter" no meio da saída
 são esperadas: fazem parte de um teste de dado malformado.

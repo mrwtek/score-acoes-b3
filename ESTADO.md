@@ -128,6 +128,32 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       partir do primeiro snapshot; resultado realizado não é calculável, o
       preço médio antigo não é guardado em nenhuma transação).
 
+- [x] **Painel do Power BI** — `Power BI/.PBIP/Painel Analise B3.pbip`, com
+      as **6 telas**: Carteira, Desempenho contra benchmark, Ranking, Saúde
+      dos dados, Ficha do ativo e Diário de teses. 26 visuais, 32 medidas, 11
+      relacionamentos, `dim_calendario` como tabela de data, cultura pt-BR.
+      Como ligar, o que cada tela tem e as armadilhas: `POWERBI.md`.
+      Por que CSV e não ODBC, por que só o `.PBIP` no git e por que campo
+      vazio vira nulo: `DECISOES.md` de 26/10.
+
+      As três últimas telas, o layout das três primeiras e as duas correções
+      de modelo foram feitos **editando o `.PBIP` direto**, com o Power BI
+      fechado, clonando estruturas que já existiam no relatório. O formato é
+      texto, então `git checkout` desfaz — e foi preciso uma vez.
+
+      **Três pendências, todas decisão sua, nenhuma é defeito:**
+      1. A Ficha do ativo usa slicer de ticker, não drill-through
+         (`POWERBI.md` §3.4 diz como converter no Desktop).
+      2. O slicer de ticker do benchmark tem seleção salva em `ITUB4`.
+      3. Eixo e legenda ficaram no tamanho padrão de fonte — os nomes desses
+         objetos não aparecem em nenhum visual, não havia o que clonar.
+
+      **Falta conferir com dado real:** nenhuma tese tem medição, então as
+      colunas de conferência de `f_tese` seguem vazias. O que está provado é
+      que o modelo abre, não que o número entra certo — em especial
+      `vencida`, declarada `type logical`. `f_transacao[taxas]` tem o mesmo
+      defeito de tipo e ficou como texto de propósito.
+
 - [x] **AFINAR-FAIXAS** as âncoras de crescimento viraram **termos reais**.
       Os dois CAGR chegam nominais da BolsAI e `faixas.nota()` deflaciona
       antes de interpolar; as âncoras não mudaram de número, mudaram de
@@ -192,74 +218,7 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] **Painel do Power BI** — montado em 26/10/2026 em `Power BI/`, nos dois
-      formatos (`.PBIP/` em texto, `.PBIX/` binário). Abre-se pelo
-      `Painel Analise B3.pbip`.
-
-      **Pronto:** as 9 consultas via `fnLerBI` + parâmetro `PastaBI`, tipagem
-      e cultura pt-BR (é o que faz o decimal com vírgula entrar como número),
-      `dim_calendario` marcada como tabela de data, os 11 relacionamentos —
-      e nenhum dos três que o `POWERBI.md` §1.7 manda não criar —, as 32
-      medidas com formatação, e **as 6 telas**: Carteira, Desempenho contra
-      benchmark, Ranking, Saúde dos dados, Ficha do ativo e Diário de teses.
-
-      As três últimas foram montadas editando o `.PBIP` direto, com o Power
-      BI fechado, clonando estruturas de visuais que já existiam no
-      relatório. Validado por arquivo: JSON bem formado, nomes únicos, toda
-      medida e coluna referenciada existe no modelo, nada fora dos
-      1920 × 1080, nenhum visual sobrepondo outro. **Não validado:** como
-      renderiza. A de Saúde dos dados foi conferida no Desktop e abriu certa;
-      as outras duas ainda não.
-
-      **Dois defeitos do modelo, corrigidos em 26/10/2026** (`POWERBI.md`
-      §0.3): as 9 consultas passaram a ler pela `fnLerBI`, então o parâmetro
-      `PastaBI` finalmente controla o caminho — antes cada uma carregava o
-      caminho absoluto no próprio M e o parâmetro não servia para nada. E as
-      12 colunas de conferência de `f_tese` deixaram de ser texto, o que
-      destravou as 4 medidas de tese. De brinde, a troca de `QuoteStyle.None`
-      para `QuoteStyle.Csv` tira as aspas que apareciam na premissa.
-
-      A retipagem **impediu o projeto de abrir** na primeira tentativa
-      (`PFE_XM_DATATYPE_CONVERSION_FAILED`, `Valor: ''`). Duas causas: o
-      `cache.abf` guardava os valores antigos como texto e o engine tentava
-      encaixá-los no schema novo em vez de reimportar; e campo vazio chegava
-      do `Csv.Document` como string vazia, que não vira número. Resolvido
-      fazendo a `fnLerBI` trocar `""` por `null` em todas as colunas — regra
-      certa pelo projeto, campo vazio é ausência — e removendo o `cache.abf`,
-      que se regenera. Roteiro, se repetir: fechar o Power BI, apagar o
-      `cache.abf`, reabrir, atualizar. `POWERBI.md` §0.4.
-
-      **Falta conferir com dado real:** nenhuma tese tem medição ainda, então
-      o que se prova agora é que o modelo abre, não que o número entra certo.
-      `f_transacao[taxas]` tem o mesmo defeito e segue como texto, de
-      propósito — não quebra nada e não se mistura com esta correção.
-
-      **Layout uniformizado em 26/10/2026.** As seis telas seguem a mesma
-      grade: margem 76 dos dois lados, topo em 40, base máxima em 1020, 24
-      de respiro entre blocos; tabela em fonte 11, rótulo de dado em 10. As
-      três primeiras foram alinhadas a ela — antes tinham quatro margens
-      esquerdas diferentes, os dois gráficos de rosca sobrepostos em 222 px
-      e visuais encostados na borda. `POWERBI.md` §0.5.
-
-      **Pendências, da que mais atrapalha para a que menos:**
-      1. A Ficha do ativo usa slicer de ticker, não drill-through
-         (`POWERBI.md` §3.4 diz como converter).
-      2. O slicer de ticker da tela de benchmark está com seleção salva em
-         `ITUB4`. Não foi mexido porque pode ser intenção.
-      3. Eixo e legenda ficaram no tamanho padrão de fonte: os nomes desses
-         objetos de formatação não aparecem em nenhum visual do relatório,
-         então não havia o que clonar com segurança.
-
-      **Versionamento decidido em 26/10/2026:** vai para o git só o `.PBIP/`,
-      com os 41 arquivos de definição em texto. Ficam de fora o `.PBIX/` (o
-      mesmo painel em binário, que entraria em duplicidade e poderia divergir
-      em silêncio), o `cache.abf` (cache que se regenera) e o
-      `localSettings.json` (assinatura presa a esta máquina). Regras no
-      `.gitignore`, razões no `POWERBI.md` §0.2.
-      Quem clonar o repositório abre o `.pbip` com o painel inteiro e sem
-      dados: `exports/bi/` também é gerado e fica fora do git.
-
-- [ ] próxima tarefa de código: **P1-14**
+- [ ] nada — próxima é **P1-14**
 
 ---
 

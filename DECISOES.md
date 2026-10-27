@@ -9,6 +9,85 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 26/10/2026 — Campo vazio no CSV vira nulo, não string vazia
+
+**Decisão:** a `fnLerBI` do Power BI troca `""` por `null` em todas as colunas,
+logo depois de promover o cabeçalho, antes de qualquer conversão de tipo.
+
+**Por quê:** descoberto do jeito caro. Depois de corrigir o tipo das colunas de
+conferência de `f_tese`, o projeto parou de abrir, com
+`PFE_XM_DATATYPE_CONVERSION_FAILED` nas 12 colunas. A mensagem dizia
+`Valor: ''` — vazio. O `Csv.Document` devolve string vazia para célula vazia, e
+string vazia não vira número nem data. Enquanto as colunas eram texto isso
+passava despercebido.
+
+Mas a razão de manter não é o erro: é que **campo vazio é ausência, não string
+vazia**, e essa é a mesma regra que vale no `scoring.py` para indicador
+faltante. Em DAX o nulo vira `BLANK()`, que `AVERAGE` ignora; a string vazia
+seria um texto que nenhuma conta aceita.
+
+**A segunda causa, que vale lembrar:** o `cache.abf` guardava os valores
+antigos como texto, e ao abrir o engine tenta encaixá-los no schema novo em vez
+de reimportar. Mudança de tipo em coluna que já tem dado pede o cache fora do
+caminho. Roteiro no `POWERBI.md` §0.4.
+
+**O que isso ensina para o futuro:** coluna que chega 100% vazia é tipada como
+texto pela detecção automática, e **reimportar não re-detecta tipo de coluna
+existente**. Ao acrescentar coluna ao `exportar_bi.py`, confira o tipo na
+consulta antes de construir medida em cima. `f_transacao[taxas]` ainda está
+assim.
+
+---
+
+## 26/10/2026 — Versiona-se o .PBIP; o .PBIX fica de fora
+
+**Decisão:** o painel do Power BI entra no git no formato de pasta (`.PBIP`,
+TMDL e JSON), e o arquivo único binário (`.PBIX`) fica no `.gitignore`, junto
+com `cache.abf` e `localSettings.json`.
+
+**Por quê:** os dois são o mesmo painel. Versionar ambos faz cada alteração
+entrar duas vezes — uma legível, outra opaca — e deixa os formatos divergirem
+em silêncio no dia em que só um for salvo. Com o `.PBIP`, uma mudança de medida
+aparece no diff, que é o que permitiu fazer o resto desta sessão: editar o
+painel por fora do Power BI e reverter com `git checkout` quando quebrou.
+
+`cache.abf` é cache de dados que se regenera; `localSettings.json` guarda uma
+assinatura presa a esta máquina e a este usuário, que em outro computador não
+vale nada.
+
+**O preço:** quem clonar o repositório abre o painel sem dados, porque
+`exports/bi/` também é gerado e está fora do git. Rodar o `exportar_bi.py` e
+apontar o parâmetro `PastaBI` resolve.
+
+---
+
+## 26/10/2026 — O Power BI lê CSVs exportados, não o banco direto
+
+**Decisão:** o `exportar_bi.py` lê o SQLite e grava CSVs em `exports/bi/`, e o
+Power BI lê a pasta. Nada de conector ODBC apontando para o `.db`.
+
+**Por quê:** o motivo fraco é de instalação — o conector de SQLite não é nativo,
+depende de driver de terceiros instalado com admin, e o Power BI desta máquina
+é o da Microsoft Store, que roda em sandbox e costuma não enxergar o DSN.
+
+O motivo forte é **onde as decisões ficam**. As regras do schema que já custaram
+caro neste projeto moram em Python testado, não espalhadas em M e DAX dentro de
+um .pbix: preço sai de `cotacoes_historicas` e nunca de `cotacoes`, data sai
+sempre em ISO, e `f_indice` leva o `fator_diario` pronto para o CDI ser composto
+com `PRODUCTX` em vez de somado com `SUM`.
+
+**O `f_score.csv` é append, e isso é de propósito.** O score não existe no
+banco, só é calculado na hora; cada execução congela o snapshot do dia. É o que
+vai dar série ao score sem antecipar o `snapshots.py` do P1-4 — e quando o P1-4
+existir, a fonte passa a ser a tabela. Rodar duas vezes no mesmo dia reescreve o
+dia, não duplica, pela mesma lógica do `ja_tem_fundamento_hoje()`.
+
+**O que isso cobra:** a exportação roda **depois** da coleta, e de novo sempre
+que a metodologia do score mudar — senão o snapshot do dia fica numa régua que
+não é mais a vigente. Aconteceu duas vezes em 26/10/2026.
+
+---
+
 ## 26/10/2026 — Faixas absolutas interpoladas, não em degraus
 
 **Decisão (P1-11):** as faixas da 7A viram **âncoras** e o meio é interpolado
