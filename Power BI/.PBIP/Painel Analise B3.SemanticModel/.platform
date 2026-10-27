@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "Painel Analise B3"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "9551520e-e0bc-4e1f-9f57-fc09ce9dcf80"
+  }
+}

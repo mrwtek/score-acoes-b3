@@ -1,0 +1,471 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "469817221049257e9e87",
+  "position": {
+    "x": 63.333333333333336,
+    "y": 55,
+    "z": 0,
+    "height": 438.33333333333337,
+    "width": 1838.3333333333335,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_ativo"
+                    }
+                  },
+                  "Property": "ticker"
+                }
+              },
+              "queryRef": "dim_ativo.ticker",
+              "nativeQueryRef": "ticker"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_ativo"
+                    }
+                  },
+                  "Property": "setor"
+                }
+              },
+              "queryRef": "dim_ativo.setor",
+              "nativeQueryRef": "setor"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Score fundamentalista"
+                }
+              },
+              "queryRef": "_Medidas.Score fundamentalista",
+              "nativeQueryRef": "Score fundamentalista"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Score de reversão"
+                }
+              },
+              "queryRef": "_Medidas.Score de reversão",
+              "nativeQueryRef": "Score de reversão"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Cobertura"
+                }
+              },
+              "queryRef": "_Medidas.Cobertura",
+              "nativeQueryRef": "Cobertura"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Janela de reversão"
+                }
+              },
+              "queryRef": "_Medidas.Janela de reversão",
+              "nativeQueryRef": "Janela de reversão"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_score"
+                        }
+                      },
+                      "Property": "valuation"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_score.valuation)",
+              "nativeQueryRef": "Soma de valuation"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_score"
+                    }
+                  },
+                  "Property": "rentabilidade"
+                }
+              },
+              "queryRef": "Sum(f_score.rentabilidade)",
+              "nativeQueryRef": "rentabilidade"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_score"
+                    }
+                  },
+                  "Property": "margens"
+                }
+              },
+              "queryRef": "Sum(f_score.margens)",
+              "nativeQueryRef": "margens"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_score"
+                    }
+                  },
+                  "Property": "crescimento"
+                }
+              },
+              "queryRef": "Sum(f_score.crescimento)",
+              "nativeQueryRef": "crescimento"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "f_score"
+                    }
+                  },
+                  "Property": "seguranca"
+                }
+              },
+              "queryRef": "Sum(f_score.seguranca)",
+              "nativeQueryRef": "seguranca"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "_Medidas"
+                  }
+                },
+                "Property": "Score fundamentalista"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "objects": {
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "15D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "207.68770528755778D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Medidas.Score de reversão"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "226.33332204962113D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Medidas.Score fundamentalista"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "109.00000481133054D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_ativo.ticker"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "121.99999181521085D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Medidas.Cobertura"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "170.62717043115214D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Medidas.Janela de reversão"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "204.27686817153352D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Sum(f_score.valuation)"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "121.99999336574535D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Sum(f_score.rentabilidade)"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "123.96596270091253D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Sum(f_score.margens)"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "129.36739673787122D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Sum(f_score.crescimento)"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "140.6323336120982D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Sum(f_score.seguranca)"
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "backColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 3,
+                      "Percent": 0
+                    }
+                  }
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 0,
+                      "Percent": 0
+                    }
+                  }
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "12D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "grid": [
+        {
+          "properties": {
+            "gridVertical": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "gridVerticalWeight": {
+              "expr": {
+                "Literal": {
+                  "Value": "2D"
+                }
+              }
+            },
+            "gridVerticalColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 2,
+                      "Percent": 0.2
+                    }
+                  }
+                }
+              }
+            },
+            "gridHorizontalColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 2,
+                      "Percent": 0.6
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "background": [
+        {
+          "properties": {}
+        }
+      ],
+      "stylePreset": [
+        {
+          "properties": {
+            "name": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Minimal'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,97 @@
+table meta_exportacao
+	lineageTag: 2e3c10fa-b148-41c2-94f0-9471ec065f4a
+
+	column arquivo
+		dataType: string
+		lineageTag: f4d34e88-4a6c-4908-877d-25680cadea70
+		summarizeBy: none
+		sourceColumn: arquivo
+
+		annotation SummarizationSetBy = Automatic
+
+	column linhas
+		dataType: int64
+		formatString: 0
+		lineageTag: 9c0c4799-302b-4d90-b228-d20205be3e50
+		summarizeBy: sum
+		sourceColumn: linhas
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_min
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 883c8723-09c7-44d4-b33b-f28c05385c36
+		summarizeBy: none
+		sourceColumn: data_min
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column data_max
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 954c66f8-4d3b-4ea9-955a-27884968fc0d
+		summarizeBy: none
+		sourceColumn: data_max
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column janela_inicio
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 9b75e79a-fa15-4958-a9e7-7dc43b22c039
+		summarizeBy: none
+		sourceColumn: janela_inicio
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column janela_fim
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: f9acac20-0f9e-417e-aed4-917c5de8f832
+		summarizeBy: none
+		sourceColumn: janela_fim
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column tickers_sem_score
+		dataType: string
+		lineageTag: 43edb91d-f769-4019-afed-fab6f8ef5855
+		summarizeBy: none
+		sourceColumn: tickers_sem_score
+
+		annotation SummarizationSetBy = Automatic
+
+	column exportado_em
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 3a14b03f-adb8-4d17-896a-449b0c418c88
+		summarizeBy: none
+		sourceColumn: exportado_em
+
+		annotation SummarizationSetBy = Automatic
+
+	partition meta_exportacao = m
+		mode: import
+		source =
+				let
+				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+				    #"C:\Users\Dimlu\app-b3\exports\bi\_meta_exportacao csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="meta_exportacao.csv"]}[Content],
+				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_meta_exportacao csv",[Delimiter=";", Columns=8, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"arquivo", type text}, {"linhas", Int64.Type}, {"data_min", type date}, {"data_max", type date}, {"janela_inicio", type date}, {"janela_fim", type date}, {"tickers_sem_score", type text}, {"exportado_em", type datetime}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

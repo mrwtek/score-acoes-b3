@@ -1,0 +1,212 @@
+table f_score
+	lineageTag: 2b551861-71b5-4c7e-b90b-92fcd1d17b01
+
+	column data_snapshot
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: d5130d41-4920-4e02-9a09-ad487ca54a1f
+		summarizeBy: none
+		sourceColumn: data_snapshot
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column ticker
+		dataType: string
+		lineageTag: df8f6a0f-4c40-4157-810c-80f2bd83a0cf
+		summarizeBy: none
+		sourceColumn: ticker
+
+		annotation SummarizationSetBy = Automatic
+
+	column valuation
+		dataType: double
+		lineageTag: 2dee7e58-5035-4a2e-af7a-a41d5959f340
+		summarizeBy: sum
+		sourceColumn: valuation
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column rentabilidade
+		dataType: double
+		lineageTag: fe91a185-4305-4ee2-b655-775dc7410a05
+		summarizeBy: sum
+		sourceColumn: rentabilidade
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column margens
+		dataType: double
+		lineageTag: 89ac3a96-332c-4fd6-ab19-00ea94efa40c
+		summarizeBy: sum
+		sourceColumn: margens
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column crescimento
+		dataType: double
+		lineageTag: 3a241b1e-ef64-4d25-abb2-289a5470ac87
+		summarizeBy: sum
+		sourceColumn: crescimento
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column seguranca
+		dataType: double
+		lineageTag: b5509d55-e417-4322-9fd7-e45cfe0e7a7e
+		summarizeBy: sum
+		sourceColumn: seguranca
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column score_fundamentalista
+		dataType: double
+		lineageTag: 543ca569-a71f-4a3b-a181-3df7418c6f69
+		summarizeBy: sum
+		sourceColumn: score_fundamentalista
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column indicadores_usados
+		dataType: int64
+		formatString: 0
+		lineageTag: ba234da3-eac0-49aa-849a-6a25c62b8951
+		summarizeBy: sum
+		sourceColumn: indicadores_usados
+
+		annotation SummarizationSetBy = Automatic
+
+	column indicadores_aplicaveis
+		dataType: int64
+		formatString: 0
+		lineageTag: 7e45329d-e265-4076-b29f-df74aa8fb424
+		summarizeBy: sum
+		sourceColumn: indicadores_aplicaveis
+
+		annotation SummarizationSetBy = Automatic
+
+	column categorias_usadas
+		dataType: int64
+		formatString: 0
+		lineageTag: e124e7cc-da3c-4fbb-b2df-2eab4bf2ec2e
+		summarizeBy: sum
+		sourceColumn: categorias_usadas
+
+		annotation SummarizationSetBy = Automatic
+
+	column pl
+		dataType: double
+		lineageTag: f5ab4d5c-5a8b-4316-b607-bef07ef8ab53
+		summarizeBy: sum
+		sourceColumn: pl
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column pvp
+		dataType: double
+		lineageTag: c45e1b40-e992-4bb7-b19d-89e9209f2a2d
+		summarizeBy: sum
+		sourceColumn: pvp
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column earnings_yield
+		dataType: double
+		lineageTag: 902b67fc-6e6a-40b4-957f-12bfded854ed
+		summarizeBy: sum
+		sourceColumn: earnings_yield
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column book_to_market
+		dataType: double
+		lineageTag: 76ba00e0-92d4-4194-a3a3-c654b4e95da6
+		summarizeBy: sum
+		sourceColumn: book_to_market
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column preco_atual
+		dataType: double
+		lineageTag: cfdeff8d-2e67-420c-b103-43104cea450e
+		summarizeBy: sum
+		sourceColumn: preco_atual
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column score_reversao
+		dataType: double
+		lineageTag: 4da627be-1fc0-4c56-b99e-ea4001f3d496
+		summarizeBy: sum
+		sourceColumn: score_reversao
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column observacoes
+		dataType: int64
+		formatString: 0
+		lineageTag: 08f46aeb-3e10-40e1-bcf6-509676c2b1db
+		summarizeBy: sum
+		sourceColumn: observacoes
+
+		annotation SummarizationSetBy = Automatic
+
+	column dados_insuficientes
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: be7b3d0a-aa77-4dd5-8160-551dd7177227
+		summarizeBy: none
+		sourceColumn: dados_insuficientes
+
+		annotation SummarizationSetBy = Automatic
+
+	column janela_completa
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 4bb7526a-1551-47c7-aa88-6a18f18cae7b
+		summarizeBy: none
+		sourceColumn: janela_completa
+
+		annotation SummarizationSetBy = Automatic
+
+	partition f_score = m
+		mode: import
+		source =
+				let
+				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_score csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_score.csv"]}[Content],
+				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_score csv",[Delimiter=";", Columns=20, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"data_snapshot", type date}, {"ticker", type text}, {"valuation", type number}, {"rentabilidade", type number}, {"margens", type number}, {"crescimento", type number}, {"seguranca", type number}, {"score_fundamentalista", type number}, {"indicadores_usados", Int64.Type}, {"indicadores_aplicaveis", Int64.Type}, {"categorias_usadas", Int64.Type}, {"pl", type number}, {"pvp", type number}, {"earnings_yield", type number}, {"book_to_market", type number}, {"preco_atual", type number}, {"score_reversao", type number}, {"observacoes", Int64.Type}, {"dados_insuficientes", type logical}, {"janela_completa", type logical}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,97 @@
+table f_preco_diario
+	lineageTag: e5dda949-660b-4b46-aae8-44fbb6eb44be
+
+	column ticker
+		dataType: string
+		lineageTag: b3a79696-c17f-4f6e-bab2-fcd2c2f146e8
+		summarizeBy: none
+		sourceColumn: ticker
+
+		annotation SummarizationSetBy = Automatic
+
+	column data
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: b6f60370-cf0d-499a-aef1-e23f20e056c6
+		summarizeBy: none
+		sourceColumn: data
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column abertura
+		dataType: double
+		lineageTag: 8a63298e-83af-4603-a9ef-f16f1bb9e07f
+		summarizeBy: sum
+		sourceColumn: abertura
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column maxima
+		dataType: double
+		lineageTag: 54671f33-7167-41a9-a551-c3740830876f
+		summarizeBy: sum
+		sourceColumn: maxima
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column minima
+		dataType: double
+		lineageTag: 898a2e51-e386-4f8d-bad2-cca675d0d038
+		summarizeBy: sum
+		sourceColumn: minima
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column fechamento
+		dataType: double
+		lineageTag: c5f6aed6-f139-4d7a-be93-4a94b6226f7f
+		summarizeBy: sum
+		sourceColumn: fechamento
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column fechamento_ajustado
+		dataType: double
+		lineageTag: 0ceeac97-6950-4d72-821c-f6151223016f
+		summarizeBy: sum
+		sourceColumn: fechamento_ajustado
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column volume
+		dataType: int64
+		formatString: 0
+		lineageTag: 016482db-de7b-416c-95e4-36eeae38b024
+		summarizeBy: sum
+		sourceColumn: volume
+
+		annotation SummarizationSetBy = Automatic
+
+	partition f_preco_diario = m
+		mode: import
+		source =
+				let
+				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_preco_diario csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_preco_diario.csv"]}[Content],
+				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_preco_diario csv",[Delimiter=";", Columns=8, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"ticker", type text}, {"data", type date}, {"abertura", type number}, {"maxima", type number}, {"minima", type number}, {"fechamento", type number}, {"fechamento_ajustado", type number}, {"volume", Int64.Type}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

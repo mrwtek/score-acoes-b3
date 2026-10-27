@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "Painel Analise B3"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "86bd979a-67f3-4e90-b62d-f3708a0acae6"
+  }
+}

@@ -1,0 +1,66 @@
+table f_indice
+	lineageTag: 0a4787f9-e5c3-4b87-9b05-4e3de3882482
+
+	column codigo
+		dataType: string
+		lineageTag: 07be0927-88d8-46b3-9b09-58dbe3ee9887
+		summarizeBy: none
+		sourceColumn: codigo
+
+		annotation SummarizationSetBy = Automatic
+
+	column data
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 134d190b-024c-4d52-a864-a449996a34e2
+		summarizeBy: none
+		sourceColumn: data
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column valor
+		dataType: double
+		lineageTag: da0602ba-ff9f-48ed-82ba-7592c18b76f5
+		summarizeBy: sum
+		sourceColumn: valor
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column tipo
+		dataType: string
+		lineageTag: 8e87c9c8-f609-4f0e-8ae1-f381dd4c805e
+		summarizeBy: none
+		sourceColumn: tipo
+
+		annotation SummarizationSetBy = Automatic
+
+	column fator_diario
+		dataType: double
+		lineageTag: d561181f-3df5-4410-9c38-82ae07991ae4
+		summarizeBy: sum
+		sourceColumn: fator_diario
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition f_indice = m
+		mode: import
+		source =
+				let
+				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_indice csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_indice.csv"]}[Content],
+				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_indice csv",[Delimiter=";", Columns=5, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"codigo", type text}, {"data", type date}, {"valor", type number}, {"tipo", type text}, {"fator_diario", type number}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

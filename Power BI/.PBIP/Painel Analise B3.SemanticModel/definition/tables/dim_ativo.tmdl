@@ -1,0 +1,79 @@
+table dim_ativo
+	lineageTag: 9928aa8b-c924-4984-a8f1-7366cf953439
+
+	column ticker
+		dataType: string
+		lineageTag: 8eb5c6eb-ba85-4d95-b55c-58d6abe4e0c3
+		summarizeBy: none
+		sourceColumn: ticker
+
+		annotation SummarizationSetBy = Automatic
+
+	column setor
+		dataType: string
+		lineageTag: 4337e350-34b3-40d3-88dc-743684ca0a4f
+		summarizeBy: none
+		sourceColumn: setor
+
+		annotation SummarizationSetBy = Automatic
+
+	column classe
+		dataType: string
+		lineageTag: 8ddfd555-6e7c-4de7-a550-8e0e9d40dbe0
+		summarizeBy: none
+		sourceColumn: classe
+
+		annotation SummarizationSetBy = Automatic
+
+	column em_carteira
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 73b4dfbb-68d5-45c5-84d0-ffd8289df1df
+		summarizeBy: none
+		sourceColumn: em_carteira
+
+		annotation SummarizationSetBy = Automatic
+
+	column na_whitelist_base
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 03cbd99a-b0bd-46be-821e-b2331a34fda4
+		summarizeBy: none
+		sourceColumn: na_whitelist_base
+
+		annotation SummarizationSetBy = Automatic
+
+	column setor_mapeado
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 80c1e074-e78d-4984-b5c4-61f464d76676
+		summarizeBy: none
+		sourceColumn: setor_mapeado
+
+		annotation SummarizationSetBy = Automatic
+
+	column indicadores_nao_aplicaveis
+		dataType: int64
+		formatString: 0
+		lineageTag: 4ad6d0e9-9658-4e4d-8b53-85cf4ee29f86
+		summarizeBy: sum
+		sourceColumn: indicadores_nao_aplicaveis
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_ativo = m
+		mode: import
+		source =
+				let
+				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+				    #"C:\Users\Dimlu\app-b3\exports\bi\_dim_ativo csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="dim_ativo.csv"]}[Content],
+				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_dim_ativo csv",[Delimiter=";", Columns=7, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"ticker", type text}, {"setor", type text}, {"classe", type text}, {"em_carteira", type logical}, {"na_whitelist_base", type logical}, {"setor_mapeado", type logical}, {"indicadores_nao_aplicaveis", Int64.Type}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

@@ -4,3 +4,15 @@ __pycache__/
 *.db
 .ipynb_checkpoints/
 exports/
+
+# Power BI -- versionamos o .PBIP, que e texto e aparece no diff.
+# O .PBIX e o mesmo painel em binario: versionar os dois faz cada alteracao
+# entrar duas vezes e deixa os formatos divergirem em silencio.
+# Ver POWERBI.md secao 0.2.
+Power BI/.PBIX/
+
+# cache dos dados do modelo; se regenera sozinho
+Power BI/.PBIP/**/.pbi/cache.abf
+
+# assinatura criptografada presa a esta maquina e a este usuario
+Power BI/.PBIP/**/.pbi/localSettings.json

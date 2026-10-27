@@ -1,0 +1,29 @@
+model Model
+	culture: pt-BR
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: pt-BR
+	valueFilterBehavior: independent
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["dim_ativo","f_fundamento","f_indice","f_posicao","f_preco_diario","f_score","f_tese","f_transacao","meta_exportacao","fnLerBI","PastaBI"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table dim_ativo
+ref table f_fundamento
+ref table f_indice
+ref table f_posicao
+ref table f_preco_diario
+ref table f_score
+ref table f_tese
+ref table f_transacao
+ref table meta_exportacao
+ref table dim_calendario
+ref table _Medidas
+
+ref cultureInfo pt-BR
+

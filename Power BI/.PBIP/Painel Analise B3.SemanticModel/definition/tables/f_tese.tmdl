@@ -1,0 +1,213 @@
+table f_tese
+	lineageTag: 12c8755b-999c-43fc-a593-adefc0ebe210
+
+	column id
+		dataType: int64
+		formatString: 0
+		lineageTag: 6d46275e-11c7-4ded-bfc9-e5e167ddf224
+		summarizeBy: sum
+		sourceColumn: id
+
+		annotation SummarizationSetBy = Automatic
+
+	column ticker
+		dataType: string
+		lineageTag: bdb8a4d5-dd2f-4745-9363-4bae4ff3abf5
+		summarizeBy: none
+		sourceColumn: ticker
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_abertura
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 40739103-fb16-48c2-ab9a-ef08d9d7a5bd
+		summarizeBy: none
+		sourceColumn: data_abertura
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column preco_abertura
+		dataType: double
+		lineageTag: a89f90df-d5b5-4a0b-9228-3ae69dad5acf
+		summarizeBy: sum
+		sourceColumn: preco_abertura
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column premissa
+		dataType: string
+		lineageTag: 984c2058-c813-4012-9cc7-e554e01afafd
+		summarizeBy: none
+		sourceColumn: premissa
+
+		annotation SummarizationSetBy = Automatic
+
+	column criterio
+		dataType: string
+		lineageTag: 731f37d1-5571-45d9-b0d8-1099213e5051
+		summarizeBy: none
+		sourceColumn: criterio
+
+		annotation SummarizationSetBy = Automatic
+
+	column horizonte_dias
+		dataType: int64
+		formatString: 0
+		lineageTag: 8c78fe11-cf89-4f6c-8830-c0b4fe281e4b
+		summarizeBy: sum
+		sourceColumn: horizonte_dias
+
+		annotation SummarizationSetBy = Automatic
+
+	column score_abertura
+		dataType: double
+		lineageTag: 29b87f45-e9f4-4946-9f13-837a17c93199
+		summarizeBy: sum
+		sourceColumn: score_abertura
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column status
+		dataType: string
+		lineageTag: 6320ff27-4224-4787-b8ff-115dad7d2839
+		summarizeBy: none
+		sourceColumn: status
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_encerramento
+		dataType: string
+		lineageTag: 0e87b32d-851f-4096-a6b5-37629a4bfb36
+		summarizeBy: none
+		sourceColumn: data_encerramento
+
+		annotation SummarizationSetBy = Automatic
+
+	column veredito
+		dataType: string
+		lineageTag: 295ea550-ac2c-488c-970a-0d33f372693f
+		summarizeBy: none
+		sourceColumn: veredito
+
+		annotation SummarizationSetBy = Automatic
+
+	column criado_em
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 176219e7-987b-412f-be66-994a5dc2da48
+		summarizeBy: none
+		sourceColumn: criado_em
+
+		annotation SummarizationSetBy = Automatic
+
+	column medido_ate
+		dataType: string
+		lineageTag: ee14096e-d641-445b-a07a-771689de7b5b
+		summarizeBy: none
+		sourceColumn: medido_ate
+
+		annotation SummarizationSetBy = Automatic
+
+	column preco_atual
+		dataType: string
+		lineageTag: 5f3c8a3b-28fd-4137-a38d-6663c1e0a079
+		summarizeBy: none
+		sourceColumn: preco_atual
+
+		annotation SummarizationSetBy = Automatic
+
+	column retorno
+		dataType: string
+		lineageTag: c5ade24c-94a0-4189-930a-bc9a81e93955
+		summarizeBy: none
+		sourceColumn: retorno
+
+		annotation SummarizationSetBy = Automatic
+
+	column ibov
+		dataType: string
+		lineageTag: 717c1dc3-fa35-4e24-943c-ed8ef19791ba
+		summarizeBy: none
+		sourceColumn: ibov
+
+		annotation SummarizationSetBy = Automatic
+
+	column cdi
+		dataType: string
+		lineageTag: 6fae350f-47a3-4600-8a18-50da4479abcf
+		summarizeBy: none
+		sourceColumn: cdi
+
+		annotation SummarizationSetBy = Automatic
+
+	column vs_ibov
+		dataType: string
+		lineageTag: 2c489e4d-1c92-44e2-bd7a-0aa87dbb58d8
+		summarizeBy: none
+		sourceColumn: vs_ibov
+
+		annotation SummarizationSetBy = Automatic
+
+	column vs_cdi
+		dataType: string
+		lineageTag: 973a619c-638b-4a16-a181-74e0712a073e
+		summarizeBy: none
+		sourceColumn: vs_cdi
+
+		annotation SummarizationSetBy = Automatic
+
+	column dias_corridos
+		dataType: string
+		lineageTag: 83d0dbe0-f6cf-4cfd-9fb2-3e26d00eda03
+		summarizeBy: none
+		sourceColumn: dias_corridos
+
+		annotation SummarizationSetBy = Automatic
+
+	column dias_restantes
+		dataType: string
+		lineageTag: e3516308-3a15-4c43-95a8-10758ce65312
+		summarizeBy: none
+		sourceColumn: dias_restantes
+
+		annotation SummarizationSetBy = Automatic
+
+	column vencimento
+		dataType: string
+		lineageTag: a91c1ca9-0e51-438b-9377-707c40aa4f43
+		summarizeBy: none
+		sourceColumn: vencimento
+
+		annotation SummarizationSetBy = Automatic
+
+	column vencida
+		dataType: string
+		lineageTag: ed2190ac-971d-48e3-8ed8-1341d32255a4
+		summarizeBy: none
+		sourceColumn: vencida
+
+		annotation SummarizationSetBy = Automatic
+
+	partition f_tese = m
+		mode: import
+		source =
+				let
+				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_tese csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_tese.csv"]}[Content],
+				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_tese csv",[Delimiter=";", Columns=23, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"id", Int64.Type}, {"ticker", type text}, {"data_abertura", type date}, {"preco_abertura", type number}, {"premissa", type text}, {"criterio", type text}, {"horizonte_dias", Int64.Type}, {"score_abertura", type number}, {"status", type text}, {"data_encerramento", type text}, {"veredito", type text}, {"criado_em", type datetime}, {"medido_ate", type text}, {"preco_atual", type text}, {"retorno", type text}, {"ibov", type text}, {"cdi", type text}, {"vs_ibov", type text}, {"vs_cdi", type text}, {"dias_corridos", type text}, {"dias_restantes", type text}, {"vencimento", type text}, {"vencida", type text}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

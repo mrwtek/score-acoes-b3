@@ -1,0 +1,26 @@
+expression PastaBI = "C:\Users\Dimlu\app-b3\exports\bi" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 530c1d5b-acc0-4b19-8dcc-bfda5590f951
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Text
+
+expression fnLerBI =
+		let
+		    fnLerBI = (nomeArquivo as text) as table =>
+		        let
+		            Origem = Csv.Document(
+		                File.Contents(PastaBI & "\" & nomeArquivo),
+		                [Delimiter = ";", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]
+		            ),
+		            Cabecalho = Table.PromoteHeaders(Origem, [PromoteAllScalars = true])
+		        in
+		            Cabecalho
+		in
+		    fnLerBI
+	lineageTag: 34e1067c-7dfc-48bc-83fe-08ff07d7b9d6
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Function
+

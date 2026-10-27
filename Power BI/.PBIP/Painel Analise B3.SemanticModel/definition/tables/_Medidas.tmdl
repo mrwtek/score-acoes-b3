@@ -1,0 +1,337 @@
+table _Medidas
+	lineageTag: e5b7ca3b-c10f-4837-b6e9-038a349e92fa
+
+	measure Preço =
+			
+			LASTNONBLANKVALUE (
+			    dim_calendario[Date],
+			    CALCULATE ( AVERAGE ( f_preco_diario[fechamento_ajustado] ) )
+			)
+		lineageTag: bc819eae-79dc-49c5-8343-1f1f9bcc5cfe
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Preço de tela' =
+			
+			LASTNONBLANKVALUE (
+			    dim_calendario[Date],
+			    CALCULATE ( AVERAGE ( f_preco_diario[fechamento] ) )
+			)
+		lineageTag: fd563ad7-31ba-4d2d-bb00-4ce980141a62
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure Quantidade = SUM ( f_posicao[quantidade] )
+		formatString: 0
+		lineageTag: 2ea9ad9f-864c-4dc0-8cc9-d89d8d2099f5
+
+	measure Custo = SUM ( f_posicao[custo_total] )
+		lineageTag: b2c09b2e-a61b-468d-b137-71bde0be4ba5
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Valor de mercado' =
+			
+			SUMX ( VALUES ( dim_ativo[ticker] ), [Quantidade] * [Preço] )
+		lineageTag: 0e35a968-065e-45ea-8861-73f51cc8f9d5
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Resultado não realizado' = [Valor de mercado] - [Custo]
+		lineageTag: 364dd863-adcc-4758-a7b5-a01a7f44fb44
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Resultado não realizado %' = ```
+			DIVIDE ( [Resultado não realizado], [Custo] )
+			
+			```
+		formatString: 0.00%;-0.00%;0.00%
+		lineageTag: c0525887-48af-4903-a935-bdb660f7963a
+
+	measure 'Fim comparável' = ```
+			MAX ( meta_exportacao[janela_fim] )
+			
+			```
+		formatString: General Date
+		lineageTag: a95f8933-8d3d-4414-9d24-3741d4a6275b
+
+	measure 'Retorno do ativo %' = ```
+			
+			VAR Inicio =
+			    CALCULATE (
+			        FIRSTNONBLANKVALUE (
+			            dim_calendario[Date],
+			            CALCULATE ( AVERAGE ( f_preco_diario[fechamento_ajustado] ) )
+			        ),
+			        ALLSELECTED ( dim_calendario )
+			    )
+			RETURN
+			    DIVIDE ( [Preço], Inicio ) - 1
+			
+			```
+		formatString: 0.00%;-0.00%;0.00%
+		lineageTag: f9859900-27aa-4d1d-af5f-0da0a536a719
+
+	measure 'Retorno IBOV %' = ```
+			
+			VAR Ate = [Fim comparável]
+			VAR Serie =
+			    CALCULATETABLE (
+			        f_indice,
+			        f_indice[codigo] = "IBOV",
+			        f_indice[data] <= Ate,
+			        ALLSELECTED ( dim_calendario )
+			    )
+			VAR Primeiro = MINX ( Serie, f_indice[data] )
+			VAR Ultimo = MAXX ( Serie, f_indice[data] )
+			VAR Abertura = MAXX ( FILTER ( Serie, f_indice[data] = Primeiro ), f_indice[valor] )
+			VAR Fechamento = MAXX ( FILTER ( Serie, f_indice[data] = Ultimo ), f_indice[valor] )
+			RETURN
+			    DIVIDE ( Fechamento, Abertura ) - 1
+			
+			```
+		formatString: 0.00%;-0.00%;0.00%
+		lineageTag: 034f3856-b5d5-4ef6-913f-90333d1613cf
+
+	measure 'Retorno CDI %' = ```
+			
+			VAR Ate = [Fim comparável]
+			RETURN
+			    CALCULATE (
+			        PRODUCTX ( f_indice, f_indice[fator_diario] ) - 1,
+			        f_indice[codigo] = "CDI",
+			        f_indice[data] <= Ate,
+			        ALLSELECTED ( dim_calendario )
+			    )
+			
+			```
+		formatString: 0.00%;-0.00%;0.00%
+		lineageTag: de2d4199-dc70-4f58-8691-17f4c1650932
+
+	measure 'Ativo vs IBOV (p.p.)' = ```
+			( [Retorno do ativo %] - [Retorno IBOV %] ) * 100
+			
+			```
+		lineageTag: c3c4f314-310f-4f74-8a78-dd955be5930f
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Ativo vs CDI (p.p.)' = ```
+			( [Retorno do ativo %] - [Retorno CDI %] ) * 100
+			
+			```
+		lineageTag: b0107dff-2d22-49fe-b78c-7c3d6e20eeca
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Ativo base 100' = ```
+			
+			VAR Inicio =
+			    CALCULATE (
+			        FIRSTNONBLANKVALUE (
+			            dim_calendario[Date],
+			            CALCULATE ( AVERAGE ( f_preco_diario[fechamento_ajustado] ) )
+			        ),
+			        ALLSELECTED ( dim_calendario )
+			    )
+			VAR Atual = CALCULATE ( AVERAGE ( f_preco_diario[fechamento_ajustado] ) )
+			RETURN
+			    DIVIDE ( Atual, Inicio ) * 100
+			
+			```
+		lineageTag: fa8e69bf-110d-4b93-b39f-c597a874ec61
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'IBOV base 100' = ```
+			
+			VAR Ate = MAX ( dim_calendario[Date] )
+			VAR Desde = CALCULATE ( MIN ( dim_calendario[Date] ), ALLSELECTED ( dim_calendario ) )
+			VAR Serie =
+			    CALCULATETABLE ( f_indice, f_indice[codigo] = "IBOV", ALL ( dim_calendario ) )
+			VAR Abertura =
+			    MAXX ( FILTER ( Serie, f_indice[data] = Desde ), f_indice[valor] )
+			VAR Atual =
+			    MAXX ( FILTER ( Serie, f_indice[data] = Ate ), f_indice[valor] )
+			RETURN
+			    DIVIDE ( Atual, Abertura ) * 100
+			
+			```
+		lineageTag: 2d61f1f0-52cb-4c03-8c33-238b6b67e678
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'CDI base 100' = ```
+			
+			VAR Ate = MAX ( dim_calendario[Date] )
+			VAR Desde = CALCULATE ( MIN ( dim_calendario[Date] ), ALLSELECTED ( dim_calendario ) )
+			RETURN
+			    CALCULATE (
+			        PRODUCTX ( f_indice, f_indice[fator_diario] ) * 100,
+			        f_indice[codigo] = "CDI",
+			        f_indice[data] >= Desde,
+			        f_indice[data] <= Ate,
+			        ALL ( dim_calendario )
+			    )
+			
+			```
+		lineageTag: 55e0c9ad-7639-4ca7-a9e1-1fb3a762286f
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Último snapshot' = ```
+			MAX ( f_score[data_snapshot] )
+			
+			```
+		formatString: General Date
+		lineageTag: 389f38c6-d348-4520-a1b4-4bdc47de394d
+
+	measure 'Score fundamentalista' = ```
+			
+			LASTNONBLANKVALUE (
+			    f_score[data_snapshot],
+			    CALCULATE ( AVERAGE ( f_score[score_fundamentalista] ) )
+			)
+			
+			```
+		lineageTag: de07b182-d39e-430a-9082-d03fd9f246f5
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Score de reversão' = ```
+			
+			LASTNONBLANKVALUE (
+			    f_score[data_snapshot],
+			    CALCULATE ( AVERAGE ( f_score[score_reversao] ) )
+			)
+			
+			```
+		lineageTag: 2461f1c0-c5cd-4c58-b100-95205639c7c2
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Cobertura %' = ```
+			
+			VAR Ultimo = [Último snapshot]
+			RETURN
+			    CALCULATE (
+			        DIVIDE (
+			            SUM ( f_score[indicadores_usados] ),
+			            SUM ( f_score[indicadores_aplicaveis] )
+			        ),
+			        f_score[data_snapshot] = Ultimo
+			    )
+			
+			```
+		formatString: 0.00%;-0.00%;0.00%
+		lineageTag: fc3ec490-a6f2-4092-84ce-f81bb9a07306
+
+	measure Cobertura = ```
+			
+			VAR Ultimo = [Último snapshot]
+			VAR Usados = CALCULATE ( SUM ( f_score[indicadores_usados] ), f_score[data_snapshot] = Ultimo )
+			VAR Aplicaveis = CALCULATE ( SUM ( f_score[indicadores_aplicaveis] ), f_score[data_snapshot] = Ultimo )
+			RETURN
+			    IF ( ISBLANK ( Aplicaveis ), BLANK (), Usados & " de " & Aplicaveis )
+			
+			```
+		lineageTag: a784526f-a39e-4ed3-a61a-d648364d338a
+
+	measure 'Janela de reversão' = ```
+			
+			VAR Ultimo = [Último snapshot]
+			VAR Obs = CALCULATE ( MAX ( f_score[observacoes] ), f_score[data_snapshot] = Ultimo )
+			VAR Insuficiente =
+			    CALCULATE ( SELECTEDVALUE ( f_score[dados_insuficientes] ), f_score[data_snapshot] = Ultimo )
+			RETURN
+			    IF ( ISBLANK ( Obs ), BLANK (), Obs & "/252" & IF ( Insuficiente = TRUE (), " !", "" ) )
+			
+			```
+		lineageTag: 4b62a737-85be-4ef0-9a1e-c40c79a17a8b
+
+	measure 'Teses abertas' = ```
+			CALCULATE ( COUNTROWS ( f_tese ), f_tese[status] = "aberta" )
+			
+			```
+		formatString: 0
+		lineageTag: 037cb2a2-a3be-472b-a28a-db7eb695bbbc
+
+	measure 'Retorno da tese %' = ```
+			AVERAGE ( f_tese[retorno] ) / 100
+			
+			```
+		formatString: 0%;-0%;0%
+		lineageTag: 8046137b-949a-44dd-a381-428ede12556a
+
+	measure 'Tese vs IBOV (p.p.)' = ```
+			AVERAGE ( f_tese[vs_ibov] )
+			
+			```
+		formatString: 0
+		lineageTag: db945047-7de2-4790-a6eb-5e3ebaaf2353
+
+	measure 'Tese vs CDI (p.p.)' = ```
+			AVERAGE ( f_tese[vs_cdi] )
+			
+			```
+		formatString: 0
+		lineageTag: 5eb8f206-2108-4c2f-a23b-7cf484380902
+
+	measure 'Dias restantes' = ```
+			SUM ( f_tese[dias_restantes] )
+			
+			```
+		formatString: 0
+		lineageTag: e0c524ed-0ed1-4357-ab42-9d68e434b0a8
+
+	measure 'Última cotação' = ```
+			MAX ( f_preco_diario[data] )
+			
+			```
+		formatString: General Date
+		lineageTag: d0413c95-211f-40e9-82ed-1e326747139e
+
+	measure 'Dias desde a última cotação' = ```
+			DATEDIFF ( [Última cotação], TODAY (), DAY )
+			
+			```
+		formatString: 0
+		lineageTag: 2dd1785a-c79a-4769-bb12-b30391b59359
+
+	measure 'Exportado em' = ```
+			MAX ( meta_exportacao[exportado_em] )
+			
+			```
+		formatString: General Date
+		lineageTag: 16f93f3f-b439-461e-9218-29e47edef963
+
+	measure 'Ativos sem score' = ```
+			SELECTEDVALUE ( meta_exportacao[tickers_sem_score] )
+			
+			```
+		lineageTag: c3d0dcb6-3b5e-46f1-b198-479d56c34331
+
+	measure 'Ativos na carteira' = ```
+			CALCULATE ( DISTINCTCOUNT ( f_posicao[ticker] ), f_posicao[quantidade] > 0 )
+			
+			```
+		formatString: 0
+		lineageTag: c9fea949-2b0c-44b3-9bd8-c99affca85be
+
+	column Value
+		isHidden
+		formatString: 0
+		lineageTag: cb98df61-0371-4a14-bb9e-6eb4259334b1
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Value]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition _Medidas = calculated
+		mode: import
+		source = {BLANK()}
+
+	annotation PBI_Id = e214c5b5fc6b46b9a7c1ffd3ef028126
+

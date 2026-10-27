@@ -1,0 +1,166 @@
+table f_fundamento
+	lineageTag: 3179a32e-42be-4425-bf63-997d172ed8aa
+
+	column ticker
+		dataType: string
+		lineageTag: c384c739-0eca-4f00-ad03-85a86937516e
+		summarizeBy: none
+		sourceColumn: ticker
+
+		annotation SummarizationSetBy = Automatic
+
+	column data
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: f61e5e47-4091-4d6d-903e-d029deb5d39b
+		summarizeBy: none
+		sourceColumn: data
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column data_hora_iso
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 9b02ef49-fd3a-49e8-868f-0e06bb3f6c62
+		summarizeBy: none
+		sourceColumn: data_hora_iso
+
+		annotation SummarizationSetBy = Automatic
+
+	column pl
+		dataType: double
+		lineageTag: b7d527e8-23ab-4c45-9a59-35deaf7dc163
+		summarizeBy: sum
+		sourceColumn: pl
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column pvp
+		dataType: double
+		lineageTag: 6678522f-dccf-43b4-a5f6-b4ad62e6608f
+		summarizeBy: sum
+		sourceColumn: pvp
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column roe
+		dataType: double
+		lineageTag: 77cdfa6a-8ed4-458f-9f94-5c0b7488c1b1
+		summarizeBy: sum
+		sourceColumn: roe
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column roa
+		dataType: double
+		lineageTag: 1dd35d5c-ff6a-4727-981d-32f0ddf5c8cb
+		summarizeBy: sum
+		sourceColumn: roa
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column roic
+		dataType: double
+		lineageTag: 0529ac26-4fe9-4108-a2e9-4fb454cedde5
+		summarizeBy: sum
+		sourceColumn: roic
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column margem_liquida
+		dataType: double
+		lineageTag: 31ccf739-ac77-407f-91c3-e37e29ae5d50
+		summarizeBy: sum
+		sourceColumn: margem_liquida
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column margem_bruta
+		dataType: double
+		lineageTag: aa340a7f-f524-4d86-8258-bc723131ef2e
+		summarizeBy: sum
+		sourceColumn: margem_bruta
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column margem_ebitda
+		dataType: double
+		lineageTag: fc049424-5262-4a33-ba31-57e51c46ea15
+		summarizeBy: sum
+		sourceColumn: margem_ebitda
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column divida_patrimonio
+		dataType: double
+		lineageTag: a4dbd5c6-31e8-4280-97e6-3df21d65b731
+		summarizeBy: sum
+		sourceColumn: divida_patrimonio
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column cagr_receita_5a
+		dataType: double
+		lineageTag: 3e2df404-4cc7-46ce-bfc2-9c2246f45e12
+		summarizeBy: sum
+		sourceColumn: cagr_receita_5a
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column cagr_lucro_5a
+		dataType: double
+		lineageTag: bb09c91f-6e09-4a9c-8bba-266ea32e8dac
+		summarizeBy: sum
+		sourceColumn: cagr_lucro_5a
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column mais_recente
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 50edee05-c90a-4d09-ac0c-1308ed180d5b
+		summarizeBy: none
+		sourceColumn: mais_recente
+
+		annotation SummarizationSetBy = Automatic
+
+	partition f_fundamento = m
+		mode: import
+		source =
+				let
+				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_fundamento csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_fundamento.csv"]}[Content],
+				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_fundamento csv",[Delimiter=";", Columns=15, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"ticker", type text}, {"data", type date}, {"data_hora_iso", type datetime}, {"pl", type number}, {"pvp", type number}, {"roe", type number}, {"roa", type number}, {"roic", type number}, {"margem_liquida", type number}, {"margem_bruta", type number}, {"margem_ebitda", type number}, {"divida_patrimonio", type number}, {"cagr_receita_5a", type number}, {"cagr_lucro_5a", type number}, {"mais_recente", type logical}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

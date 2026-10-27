@@ -1,0 +1,84 @@
+table dim_calendario
+	lineageTag: e79b2d83-a77b-46f4-a201-84f2d7b2baa0
+	dataCategory: Time
+
+	column Date
+		isKey
+		formatString: General Date
+		lineageTag: e2640c33-00e5-4540-a295-01e60760ff57
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Date]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Ano
+		formatString: 0
+		lineageTag: 94f54abc-b06d-4435-aa83-2f582c3a4ea9
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Ano]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Mes
+		lineageTag: c719c3eb-72d9-4367-96e3-262a4b63d8f1
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Mes]
+
+		annotation SummarizationSetBy = Automatic
+
+	column NumMes
+		formatString: 0
+		lineageTag: 7bd884f7-5e40-4829-b357-358407f29575
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [NumMes]
+
+		annotation SummarizationSetBy = Automatic
+
+	column AnoMes
+		lineageTag: 954b917b-bc52-4ba3-a490-1cdc8b7250a1
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [AnoMes]
+
+		annotation SummarizationSetBy = Automatic
+
+	column DiaSemana
+		lineageTag: 1625b89a-707f-4494-8756-17b47e78221d
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [DiaSemana]
+
+		annotation SummarizationSetBy = Automatic
+
+	column EhPregao
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 659936f0-7644-4a30-bdd9-332c465f6f23
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [EhPregao]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_calendario = calculated
+		mode: import
+		source =
+				
+				VAR PrimeiroDia = MIN ( f_preco_diario[data] )
+				VAR UltimoDia = MAX ( f_preco_diario[data] )
+				RETURN
+				ADDCOLUMNS (
+				    CALENDAR ( PrimeiroDia, UltimoDia ),
+				    "Ano", YEAR ( [Date] ),
+				    "Mes", FORMAT ( [Date], "mmm" ),
+				    "NumMes", MONTH ( [Date] ),
+				    "AnoMes", FORMAT ( [Date], "yyyy-MM" ),
+				    "DiaSemana", FORMAT ( [Date], "ddd" ),
+				    "EhPregao", [Date] IN DISTINCT ( f_preco_diario[data] )
+				)
+
+	annotation PBI_Id = e3b77e25e24648c5b32d90fc7facd652
+

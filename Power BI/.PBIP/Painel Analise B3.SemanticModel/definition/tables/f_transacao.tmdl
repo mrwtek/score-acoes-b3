@@ -1,0 +1,128 @@
+table f_transacao
+	lineageTag: ea739414-56b3-4c33-acf8-ee4d61a5418d
+
+	column id
+		dataType: int64
+		formatString: 0
+		lineageTag: 99675d31-f111-4dc7-9474-6ae250e3777e
+		summarizeBy: sum
+		sourceColumn: id
+
+		annotation SummarizationSetBy = Automatic
+
+	column ticker
+		dataType: string
+		lineageTag: 20841bd1-3e04-4c23-8037-64ba530ad01a
+		summarizeBy: none
+		sourceColumn: ticker
+
+		annotation SummarizationSetBy = Automatic
+
+	column tipo
+		dataType: string
+		lineageTag: 7dd9df2f-ea4b-4a21-bfd7-d63717be3069
+		summarizeBy: none
+		sourceColumn: tipo
+
+		annotation SummarizationSetBy = Automatic
+
+	column quantidade
+		dataType: int64
+		formatString: 0
+		lineageTag: ff73f738-be65-45c1-9a27-5d4f0299dfb2
+		summarizeBy: sum
+		sourceColumn: quantidade
+
+		annotation SummarizationSetBy = Automatic
+
+	column preco
+		dataType: double
+		lineageTag: 3c25068a-2924-4043-89fb-8fa13eb33263
+		summarizeBy: sum
+		sourceColumn: preco
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column data_operacao
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: d5d5ed9c-8bd7-4ac8-b985-83cf8b874738
+		summarizeBy: none
+		sourceColumn: data_operacao
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_operacao_iso
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 203b778e-6f2b-43bf-a5cc-7c880918fa81
+		summarizeBy: none
+		sourceColumn: data_operacao_iso
+
+		annotation SummarizationSetBy = Automatic
+
+	column taxas
+		dataType: string
+		lineageTag: b3900d26-dc52-4ffd-b80c-129beea97187
+		summarizeBy: none
+		sourceColumn: taxas
+
+		annotation SummarizationSetBy = Automatic
+
+	column observacao
+		dataType: string
+		lineageTag: 0b86dc2d-ee77-4d45-aa50-dbdf8a14a516
+		summarizeBy: none
+		sourceColumn: observacao
+
+		annotation SummarizationSetBy = Automatic
+
+	column data
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 90feab5c-1ade-492a-a989-acfbeff5ef7d
+		summarizeBy: none
+		sourceColumn: data
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column valor_bruto
+		dataType: double
+		lineageTag: 7df47ad3-125d-4278-8b77-167b026eca0e
+		summarizeBy: sum
+		sourceColumn: valor_bruto
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column valor_liquido
+		dataType: double
+		lineageTag: d4d1cf2f-134c-401d-a4f1-808aa9b14141
+		summarizeBy: sum
+		sourceColumn: valor_liquido
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition f_transacao = m
+		mode: import
+		source =
+				let
+				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_transacao csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_transacao.csv"]}[Content],
+				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_transacao csv",[Delimiter=";", Columns=12, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"id", Int64.Type}, {"ticker", type text}, {"tipo", type text}, {"quantidade", Int64.Type}, {"preco", type number}, {"data_operacao", type datetime}, {"data_operacao_iso", type datetime}, {"taxas", type text}, {"observacao", type text}, {"data", type date}, {"valor_bruto", type number}, {"valor_liquido", type number}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

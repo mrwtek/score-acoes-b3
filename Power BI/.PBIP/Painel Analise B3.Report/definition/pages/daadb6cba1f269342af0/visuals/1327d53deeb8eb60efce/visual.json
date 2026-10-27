@@ -1,0 +1,98 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "1327d53deeb8eb60efce",
+  "position": {
+    "x": 355,
+    "y": 55,
+    "z": 2,
+    "height": 158.33333333333334,
+    "width": 1533.3333333333335,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Retorno do ativo %"
+                }
+              },
+              "queryRef": "_Medidas.Retorno do ativo %",
+              "nativeQueryRef": "Retorno do ativo %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Retorno IBOV %"
+                }
+              },
+              "queryRef": "_Medidas.Retorno IBOV %",
+              "nativeQueryRef": "Retorno IBOV %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Retorno CDI %"
+                }
+              },
+              "queryRef": "_Medidas.Retorno CDI %",
+              "nativeQueryRef": "Retorno CDI %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Ativo vs CDI (p.p.)"
+                }
+              },
+              "queryRef": "_Medidas.Ativo vs CDI (p.p.)",
+              "nativeQueryRef": "Ativo vs CDI (p.p.)"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "_Medidas"
+                  }
+                },
+                "Property": "Retorno do ativo %"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

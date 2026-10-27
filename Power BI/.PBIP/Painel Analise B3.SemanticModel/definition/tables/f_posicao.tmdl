@@ -1,0 +1,67 @@
+table f_posicao
+	lineageTag: 7a5e2319-5f32-4877-b015-23051bb85172
+
+	column ticker
+		dataType: string
+		lineageTag: eb258c6d-2fb7-48fe-b383-d5d4bd0ed606
+		summarizeBy: none
+		sourceColumn: ticker
+
+		annotation SummarizationSetBy = Automatic
+
+	column quantidade
+		dataType: int64
+		formatString: 0
+		lineageTag: 71376c34-bfda-4a70-bcab-150e93c3b17a
+		summarizeBy: sum
+		sourceColumn: quantidade
+
+		annotation SummarizationSetBy = Automatic
+
+	column preco_medio
+		dataType: double
+		lineageTag: 36a0126a-535b-46f6-af70-4aa8f3b23e40
+		summarizeBy: sum
+		sourceColumn: preco_medio
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column data_atualizacao
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 09a0b096-d70f-4013-ab95-92b7eb8e9011
+		summarizeBy: none
+		sourceColumn: data_atualizacao
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column custo_total
+		dataType: double
+		lineageTag: d5cc9172-d3e8-40a5-8f2d-6022250ff37c
+		summarizeBy: sum
+		sourceColumn: custo_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition f_posicao = m
+		mode: import
+		source =
+				let
+				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
+				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_posicao csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_posicao.csv"]}[Content],
+				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_posicao csv",[Delimiter=";", Columns=5, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"ticker", type text}, {"quantidade", Int64.Type}, {"preco_medio", type number}, {"data_atualizacao", type date}, {"custo_total", type number}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

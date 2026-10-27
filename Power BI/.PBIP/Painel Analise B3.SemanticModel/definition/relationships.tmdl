@@ -1,0 +1,44 @@
+relationship 2e1207fc-d229-6cae-0c85-ec269c7e108c
+	fromColumn: f_preco_diario.data
+	toColumn: dim_calendario.Date
+
+relationship 4269765f-7f78-9ea7-2185-8bc1e40ea56d
+	fromColumn: f_indice.data
+	toColumn: dim_calendario.Date
+
+relationship cdf869bf-0469-eecc-37fa-31ff6a1ed65e
+	fromColumn: f_fundamento.data
+	toColumn: dim_calendario.Date
+
+relationship f62f273b-b923-7b11-120d-d573a9fe068a
+	fromColumn: f_transacao.data
+	toColumn: dim_calendario.Date
+
+relationship c535db69-16f8-f9e8-9a68-510d44e142bc
+	fromColumn: f_score.data_snapshot
+	toColumn: dim_calendario.Date
+
+relationship b0a35f24-f43f-6f25-ef02-eecdddf04109
+	fromColumn: f_preco_diario.ticker
+	toColumn: dim_ativo.ticker
+
+relationship e02cc8bd-37cc-8cd1-1666-367c4caa9cd3
+	fromColumn: f_fundamento.ticker
+	toColumn: dim_ativo.ticker
+
+relationship d748f7e0-d596-3095-e2d9-892610008645
+	fromColumn: f_transacao.ticker
+	toColumn: dim_ativo.ticker
+
+relationship 5fae4684-b8a1-7f9b-8118-7593138a7897
+	fromColumn: f_score.ticker
+	toColumn: dim_ativo.ticker
+
+relationship b5aedc59-26d2-b4bd-51b5-aa45cca9c6f1
+	fromColumn: f_posicao.ticker
+	toColumn: dim_ativo.ticker
+
+relationship cf1f636b-4745-3b90-a312-b9519974e661
+	fromColumn: f_tese.ticker
+	toColumn: dim_ativo.ticker
+

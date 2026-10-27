@@ -1,0 +1,186 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "32dacfe3e3269fca86f3",
+  "position": {
+    "x": 76.666666666666671,
+    "y": 51.666666666666671,
+    "z": 0,
+    "height": 166.66666666666669,
+    "width": 1075,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Valor de mercado"
+                }
+              },
+              "queryRef": "_Medidas.Valor de mercado",
+              "nativeQueryRef": "Valor de mercado"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Custo"
+                }
+              },
+              "queryRef": "_Medidas.Custo",
+              "nativeQueryRef": "Custo"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Resultado não realizado"
+                }
+              },
+              "queryRef": "_Medidas.Resultado não realizado",
+              "nativeQueryRef": "Resultado não realizado"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Resultado não realizado %"
+                }
+              },
+              "queryRef": "_Medidas.Resultado não realizado %",
+              "nativeQueryRef": "Resultado não realizado %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Ativos na carteira"
+                }
+              },
+              "queryRef": "_Medidas.Ativos na carteira",
+              "nativeQueryRef": "Ativos na carteira"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "_Medidas"
+                  }
+                },
+                "Property": "Valor de mercado"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "c159765a4fa35bf4da31",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Medidas"
+              }
+            },
+            "Property": "Valor de mercado"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "595660f8526ac9b0bf21",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Medidas"
+              }
+            },
+            "Property": "Custo"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "fa6e378b7847c4a878a0",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Medidas"
+              }
+            },
+            "Property": "Resultado não realizado"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "46b9f525c992328c0b87",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Medidas"
+              }
+            },
+            "Property": "Resultado não realizado %"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "61a49328489317a7f4ec",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Medidas"
+              }
+            },
+            "Property": "Ativos na carteira"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  }
+}

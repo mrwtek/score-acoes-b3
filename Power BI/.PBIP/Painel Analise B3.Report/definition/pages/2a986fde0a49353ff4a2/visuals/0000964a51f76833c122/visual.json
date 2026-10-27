@@ -1,0 +1,93 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "0000964a51f76833c122",
+  "position": {
+    "x": 63.333333333333336,
+    "y": 536.66666666666674,
+    "z": 1,
+    "height": 543.33333333333337,
+    "width": 1431.6666666666667,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "scatterChart",
+    "query": {
+      "queryState": {
+        "Series": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_ativo"
+                    }
+                  },
+                  "Property": "ticker"
+                }
+              },
+              "queryRef": "dim_ativo.ticker",
+              "nativeQueryRef": "ticker"
+            }
+          ]
+        },
+        "Size": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Valor de mercado"
+                }
+              },
+              "queryRef": "_Medidas.Valor de mercado",
+              "nativeQueryRef": "Valor de mercado"
+            }
+          ]
+        },
+        "X": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Score de reversão"
+                }
+              },
+              "queryRef": "_Medidas.Score de reversão",
+              "nativeQueryRef": "Score de reversão",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Score fundamentalista"
+                }
+              },
+              "queryRef": "_Medidas.Score fundamentalista",
+              "nativeQueryRef": "Score fundamentalista"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

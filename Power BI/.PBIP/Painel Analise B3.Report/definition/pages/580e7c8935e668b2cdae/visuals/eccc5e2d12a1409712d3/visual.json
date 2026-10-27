@@ -1,0 +1,113 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "eccc5e2d12a1409712d3",
+  "position": {
+    "x": 821.66666666666674,
+    "y": 618.33333333333337,
+    "z": 4,
+    "height": 371.66666666666669,
+    "width": 1065,
+    "tabOrder": 4
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_ativo"
+                    }
+                  },
+                  "Property": "ticker"
+                }
+              },
+              "queryRef": "dim_ativo.ticker",
+              "nativeQueryRef": "ticker"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Quantidade"
+                }
+              },
+              "queryRef": "_Medidas.Quantidade",
+              "nativeQueryRef": "Quantidade"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "f_posicao"
+                        }
+                      },
+                      "Property": "preco_medio"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(f_posicao.preco_medio)",
+              "nativeQueryRef": "Soma de preco_medio"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Preço"
+                }
+              },
+              "queryRef": "_Medidas.Preço",
+              "nativeQueryRef": "Preço"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Valor de mercado"
+                }
+              },
+              "queryRef": "_Medidas.Valor de mercado",
+              "nativeQueryRef": "Valor de mercado"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Resultado não realizado %"
+                }
+              },
+              "queryRef": "_Medidas.Resultado não realizado %",
+              "nativeQueryRef": "Resultado não realizado %"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
