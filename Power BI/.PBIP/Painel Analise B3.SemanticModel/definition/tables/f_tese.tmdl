@@ -84,11 +84,14 @@ table f_tese
 
 	column data_encerramento
 		dataType: dateTime
+		formatString: Long Date
 		lineageTag: 0e87b32d-851f-4096-a6b5-37629a4bfb36
 		summarizeBy: none
 		sourceColumn: data_encerramento
 
 		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
 
 	column veredito
 		dataType: string
@@ -109,11 +112,14 @@ table f_tese
 
 	column medido_ate
 		dataType: dateTime
+		formatString: Long Date
 		lineageTag: ee14096e-d641-445b-a07a-771689de7b5b
 		summarizeBy: none
 		sourceColumn: medido_ate
 
 		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
 
 	column preco_atual
 		dataType: double
@@ -181,11 +187,14 @@ table f_tese
 
 	column vencimento
 		dataType: dateTime
+		formatString: Long Date
 		lineageTag: a91c1ca9-0e51-438b-9377-707c40aa4f43
 		summarizeBy: none
 		sourceColumn: vencimento
 
 		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
 
 	column vencida
 		dataType: boolean

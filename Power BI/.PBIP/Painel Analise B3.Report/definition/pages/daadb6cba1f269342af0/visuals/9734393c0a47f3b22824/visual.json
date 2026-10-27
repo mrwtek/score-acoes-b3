@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "9734393c0a47f3b22824",
   "position": {
-    "x": 1600,
-    "y": 1030,
+    "x": 76,
+    "y": 918,
     "z": 3,
-    "height": 50,
-    "width": 320,
+    "height": 60,
+    "width": 1768,
     "tabOrder": 3
   },
   "visual": {
@@ -19,6 +19,12 @@
               {
                 "textRuns": [
                   {
+                    "value": "Comparação de rendimento válida até ",
+                    "textStyle": {
+                      "fontSize": "12pt"
+                    }
+                  },
+                  {
                     "value": {
                       "propertyIdentifier": {
                         "objectName": "values",
@@ -29,7 +35,13 @@
                       }
                     },
                     "textStyle": {
-                      "fontSize": "24pt"
+                      "fontSize": "12pt"
+                    }
+                  },
+                  {
+                    "value": " — é a última data em que preço, IBOV e CDI existem todos.",
+                    "textStyle": {
+                      "fontSize": "12pt"
                     }
                   }
                 ]
