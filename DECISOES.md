@@ -580,3 +580,53 @@ e acumular meses, trocar a régua passa a custar caro.
 **Limitação conhecida:** não sabemos a janela exata que a BolsAI usa no CAGR de
 5 anos, então o deflator é aproximado. Um erro de um ano na janela vale 1 a 2
 pontos de nota — irrelevante, pela medição de sensibilidade acima.
+
+---
+
+## P1-2: a escala relativa virou z-score com CDF, não min-max (26/10/2026)
+
+**Decisão:** `normalizar()` (min-max) foi substituída por `nota_relativa()`:
+winsoriza em p5/p95, calcula o z-score sobre o já winsorizado e mapeia de
+volta para 0–100 pela CDF da normal padrão. Vale só no valuation, a única
+categoria relativa.
+
+**Por quê:** o min-max tinha um defeito estrutural. O pior colocado tirava
+**exatamente 0** e o melhor **exatamente 100**, sempre, fossem quais fossem os
+números — então dois tickers quase empatados na ponta apareciam a 100 pontos
+de distância, e um único outlier esticava a régua e espremia todos os outros
+no meio. Isso é artefato de escala, não informação.
+
+**Por que CDF e não corte linear em ±2 desvios.** O z-score não tem limite e a
+escala precisa ter, então falta um mapeamento. Cortar em ±2 e esticar
+linearmente é mais simples, e com os 10 tickers de hoje as duas opções dão o
+mesmo resultado — ninguém passa de 2 desvios. Mas com a whitelist em 30 (P1-8)
+todo mundo além de 2 desvios voltaria a empatar em 0 e 100 exatos, que é
+exatamente o artefato que este item veio remover. A CDF nunca chega às pontas.
+
+Usar a CDF **não** afirma que o indicador é normalmente distribuído. Ela entra
+como função de achatamento monótona e limitada: preserva a ordem e devolve
+algo que se lê como percentil. Nota 96 quer dizer "mais barato que ~96% do
+universo", não "está a tantos desvios numa normal".
+
+Veio do `math.erf` da biblioteca padrão, para não puxar o scipy por uma função
+só.
+
+**Limitação medida, e vale conhecer:** a winsorização p5/p95 quase não faz
+efeito com 10 tickers. Não é defeito da implementação, é aritmética de
+percentil — com n pequeno, p95 cai *entre* o extremo e o vizinho dele, não
+dentro do grupo. Medido: um outlier de 900 numa série de 10 é puxado só até
+503; numa de 30, até 37,6. Nenhum percentil resolve isso com 10 pontos.
+
+Na prática o valuation está protegido por outra coisa: `LIMITE_YIELD` (1,0) e
+`LIMITE_BOOK_TO_MARKET` (5,0) cortam a métrica em
+`adicionar_metricas_valuation()`, antes de chegar na escala. A winsorização é
+a segunda linha de defesa e só passa a valer de verdade quando a whitelist
+crescer. Está registrado no `teste_35`, que **falha se ela começar a morder** —
+aí o comentário é que estará desatualizado.
+
+**Efeito medido nas pontas:**
+
+    earnings_yield    VALE3    0,00 -> 4,35     PETR4  100,00 -> 96,03
+    book_to_market    WEGE3    0,00 -> 6,65     BBAS3  100,00 -> 96,12
+
+A ordem do ranking não mudou. As notas de valuation dos 10 mudaram.

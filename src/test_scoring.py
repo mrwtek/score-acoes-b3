@@ -21,7 +21,11 @@ from scoring import (
     PESOS_CATEGORIA,
     calcular_ranking,
     calcular_score_fundamentalista,
-    normalizar,
+    nota_relativa,
+    PERCENTIL_WINSOR,
+    CATEGORIAS_ABSOLUTAS,
+    CATEGORIAS_RELATIVAS,
+    _cdf_normal,
 )
 
 COLUNAS = ["pl", "pvp", "roe", "roa", "roic", "margem_liquida", "margem_bruta",
@@ -61,32 +65,32 @@ def precos_de(*tickers, pregoes=70):
 # --------------------------------------------------------------------------
 def teste_01_indicador_ausente_nao_vira_nota_media():
     serie = pd.Series([10.0, np.nan, 30.0], index=["a", "b", "c"])
-    notas = normalizar(serie, maior_melhor=True)
+    notas = nota_relativa(serie, maior_melhor=True)
 
     assert pd.isna(notas["b"]), (
         "ausente virou nota. Antes o fillna(median) dava nota media em "
         "silencio, e nada no ranking distinguia 'mediano' de 'nao sabemos'"
     )
-    assert notas["a"] == 0.0 and notas["c"] == 100.0
+    assert notas["a"] < 50.0 < notas["c"], "a ordem tem que ser respeitada"
 
 
 def teste_02_ausente_nao_mexe_mais_na_escala_dos_presentes():
-    com_buraco = normalizar(pd.Series([10.0, np.nan, 30.0]), True)
-    sem_buraco = normalizar(pd.Series([10.0, 30.0]), True)
+    com_buraco = nota_relativa(pd.Series([10.0, np.nan, 30.0]), True)
+    sem_buraco = nota_relativa(pd.Series([10.0, 30.0]), True)
 
     assert list(com_buraco.dropna()) == list(sem_buraco), (
-        "o ausente influenciou min/max; antes ele entrava como mediana e "
-        "comprimia a escala"
+        "o ausente influenciou os percentis, a media ou o desvio -- ele tem "
+        "que ficar de fora dos tres passos"
     )
 
 
 def teste_03_serie_toda_ausente_nao_quebra():
-    notas = normalizar(pd.Series([np.nan, np.nan]), True)
+    notas = nota_relativa(pd.Series([np.nan, np.nan]), True)
     assert notas.isna().all()
 
 
 def teste_04_todos_iguais_viram_neutro_menos_o_ausente():
-    notas = normalizar(pd.Series([5.0, 5.0, np.nan], index=["a", "b", "c"]), True)
+    notas = nota_relativa(pd.Series([5.0, 5.0, np.nan], index=["a", "b", "c"]), True)
     assert notas["a"] == 50.0 and notas["b"] == 50.0
     assert pd.isna(notas["c"]), "sem valor nao ha nota, nem mesmo a neutra"
 
@@ -148,7 +152,7 @@ def teste_08_valor_de_financeira_nao_ancora_a_escala_dos_outros():
 
     assert com_banco.loc["PETR4", "seguranca"] == sem_banco.loc["PETR4", "seguranca"], (
         "a divida/PL do banco mudou a nota da PETR4 -- ela tem que sair da "
-        "coluna ANTES de normalizar, nao so deixar de pontuar"
+        "coluna ANTES de pontuar, nao so deixar de pontuar"
     )
 
 
@@ -431,6 +435,144 @@ def teste_32_cap_do_cagr_de_lucro_vale_no_score():
     assert (capado.loc["PETR4", "crescimento"]
             == no_teto.loc["PETR4", "crescimento"]), (
         "sem o teto, ano-base deprimido vira crescimento espetacular"
+    )
+
+
+# --------------------------------------------------------------------------
+# 33 a 39. P1-2: winsorizacao + z-score + CDF no valuation
+# --------------------------------------------------------------------------
+def teste_33_o_pior_nao_tira_zero_e_o_melhor_nao_tira_cem():
+    """O ACEITE DO P1-2.
+
+    Com min-max isto era impossivel: o pior tirava 0,0 e o melhor 100,0 por
+    construcao, fossem quais fossem os numeros. A distancia entre os dois
+    ultimos colocados aparecia como 100 pontos mesmo quando eles estavam
+    quase empatados.
+    """
+    notas = nota_relativa(pd.Series([10.0, 20.0, 30.0, 40.0, 50.0]), True)
+
+    assert notas.min() > 0.0, "o pior colocado voltou a tirar 0,0 exato"
+    assert notas.max() < 100.0, "o melhor colocado voltou a tirar 100,0 exato"
+    assert notas.is_monotonic_increasing, "a ordem tem que sobreviver"
+
+
+def teste_34_quase_empate_nas_pontas_nao_vira_abismo():
+    """O caso concreto que o min-max errava.
+
+    Tres tickers praticamente empatados e um destacado. No min-max os dois
+    piores ficavam em 0,0 e ~0,3, uma diferenca invisivel, enquanto a nota
+    dizia que um era o pior do universo e o outro quase.
+    """
+    notas = nota_relativa(pd.Series(
+        [1.00, 1.01, 1.02, 9.00], index=["a", "b", "c", "d"]), True)
+
+    assert notas["b"] - notas["a"] < 5.0, (
+        "dois valores a 1% de distancia ficaram a mais de 5 pontos de nota"
+    )
+    assert notas["d"] > notas["c"], "o destacado continua na frente"
+
+
+def teste_35_a_winsorizacao_so_morde_com_universo_grande():
+    """REGISTRA UMA LIMITACAO REAL, em vez de afirmar uma protecao que nao ha.
+
+    p5/p95 corta no percentil, e com poucos tickers o percentil cai ENTRE o
+    extremo e o vizinho dele, nao dentro do grupo. Com 10 valores, p95 fica a
+    95% do caminho entre o 9o e o 10o: um outlier de 900 e puxado para 503 e
+    continua esticando a regua.
+
+    Nao e defeito da implementacao, e aritmetica de percentil com n pequeno.
+    Nenhum percentil resolve isso com 10 pontos.
+
+    Na pratica hoje o valuation esta protegido por OUTRA coisa: LIMITE_YIELD e
+    LIMITE_BOOK_TO_MARKET ja cortam a metrica em adicionar_metricas_valuation,
+    antes de chegar aqui. A winsorizacao e a segunda linha, e so passa a valer
+    de verdade quando a whitelist crescer (P1-8).
+    """
+    def espalhamento(serie, quantos_normais):
+        notas = nota_relativa(pd.Series(serie), True)
+        normais = notas.iloc[:quantos_normais]
+        return normais.max() - normais.min()
+
+    com_dez = espalhamento([10.0 + i for i in range(9)] + [900.0], 9)
+    com_trinta = espalhamento([10.0 + i for i in range(29)] + [900.0], 29)
+
+    assert com_dez < 5.0, (
+        f"a winsorizacao comecou a morder com 10 tickers ({com_dez:.1f} "
+        f"pontos de espalhamento). Otimo -- mas entao este teste e o "
+        f"comentario do PERCENTIL_WINSOR estao desatualizados"
+    )
+    assert com_trinta > 50.0, (
+        f"com 30 tickers a winsorizacao deveria segurar o outlier e deixar os "
+        f"normais espalhados; ficaram em {com_trinta:.1f} pontos"
+    )
+
+
+def teste_36_winsorizar_puxa_para_a_borda_e_nao_descarta():
+    """Quem descarta o impossivel e o validacao.py; aqui o valor so esta longe."""
+    serie = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 500.0])
+    notas = nota_relativa(serie, True)
+
+    assert notas.notna().all(), "winsorizar nao pode virar descarte"
+    assert notas.iloc[-1] == notas.max(), (
+        "o outlier continua sendo o maior da serie, so parou de esticar a regua"
+    )
+
+
+def teste_37_menor_e_melhor_inverte_a_ordem():
+    crescente = nota_relativa(pd.Series([10.0, 20.0, 30.0]), maior_melhor=True)
+    decrescente = nota_relativa(pd.Series([10.0, 20.0, 30.0]), maior_melhor=False)
+
+    assert crescente.is_monotonic_increasing
+    assert decrescente.is_monotonic_decreasing
+    assert abs(crescente.iloc[1] - decrescente.iloc[1]) < 1e-9, (
+        "o do meio e a media nos dois sentidos, entao a nota dele nao muda"
+    )
+
+
+def teste_38_a_nota_se_le_como_percentil():
+    """A nota e Phi(z) em pontos percentuais: 50 na media, 84 a um desvio.
+
+    O mapeamento e testado direto em _cdf_normal, e nao pela serie: depois de
+    winsorizar, o maior valor de uma serie curta NAO esta a exatamente um
+    desvio da media (a winsorizacao encolhe o desvio junto). Confundir as duas
+    coisas foi erro meu na primeira versao deste teste.
+    """
+    assert abs(_cdf_normal(0.0) - 0.5) < 1e-12
+    assert abs(_cdf_normal(1.0) - 0.8413) < 1e-4, "percentil 84,1 da normal"
+    assert abs(_cdf_normal(-1.0) - 0.1587) < 1e-4
+    assert abs(_cdf_normal(2.0) - 0.9772) < 1e-4
+
+    # nunca chega as pontas, que e o que o aceite do P1-2 exige
+    assert 0.0 < _cdf_normal(-6.0) and _cdf_normal(6.0) < 1.0
+
+    # e na serie: quem esta na media do universo tira 50
+    notas = nota_relativa(pd.Series([-1.0, 0.0, 0.0, 0.0, 1.0]), True)
+    assert abs(notas.iloc[1] - 50.0) < 1e-9, "quem esta na media tem que tirar 50"
+
+
+def teste_39_valuation_continua_relativa_e_so_ela():
+    """O P1-2 nao podia vazar para as categorias absolutas.
+
+    Se vazasse, a nota de ROE voltaria a depender de quem esta na whitelist e
+    o P1-11 estaria desfeito.
+    """
+    assert CATEGORIAS_RELATIVAS == ("valuation",)
+    assert PERCENTIL_WINSOR == 0.05
+
+    pequeno = calcular_score_fundamentalista(montar(PETR4={}, VALE3={}))
+    grande = calcular_score_fundamentalista(montar(
+        PETR4={}, VALE3={}, WEGE3={"pl": 2.0}, FIQE3={"pl": 90.0},
+    ))
+
+    for categoria in CATEGORIAS_ABSOLUTAS:
+        assert abs(pequeno.loc["PETR4", categoria]
+                   - grande.loc["PETR4", categoria]) < 1e-9, (
+            f"{categoria} mudou com o universo -- o P1-2 vazou para fora do "
+            f"valuation"
+        )
+    assert (pequeno.loc["PETR4", "valuation"]
+            != grande.loc["PETR4", "valuation"]), (
+        "valuation NAO mudou com o universo; ela e relativa de proposito"
     )
 
 

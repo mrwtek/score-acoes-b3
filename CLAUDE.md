@@ -176,7 +176,7 @@ universo. Isso é o que torna os snapshots comparáveis ao longo do tempo.
     margens         líquida 60% | EBITDA 40%              absoluto
     crescimento     CAGR receita 60% | CAGR lucro 40%     absoluto, REAL
     seguranca       dívida/patrimônio 100%                absoluto
-    valuation       E/P 50% | B/P 50%                     relativo
+    valuation       E/P 50% | B/P 50%                     relativo (z-score)
 
 Implementado no P1-11. As faixas da 7A são **âncoras interpoladas**, não
 degraus: as notas nas âncoras são as do PRD, mas entre elas a nota varia em
@@ -186,6 +186,12 @@ Peso das cinco categorias: 20% cada — número meu, não do PRD, ver DECISOES.m
 - Valuation usa **earnings yield (1/pl)** e **book-to-market (1/pvp)**, ambos
   "maior é melhor" — nunca P/L e P/VP diretos, que pontuam prejuízo como
   "barato".
+- **A escala relativa é winsorização + z-score + CDF** (`nota_relativa()`,
+  P1-2), não mais min-max. A nota se lê como percentil: 96 quer dizer "mais
+  barato que ~96% do universo". Ninguém tira 0,0 nem 100,0 exatos — com
+  min-max o pior e o melhor tiravam isso por construção, o que é artefato de
+  escala e não informação. A CDF entra como função de achatamento monótona e
+  limitada; **não** afirma que o indicador é normalmente distribuído.
 - `score_geral` **não existe mais** (removido no P1-13). Ficam duas colunas
   independentes: `score_fundamentalista` e `score_reversao`, lidas lado a lado
   e nunca somadas.
@@ -222,8 +228,7 @@ Peso das cinco categorias: 20% cada — número meu, não do PRD, ver DECISOES.m
   7,05% move o score em no máximo 4,3 pontos). Só os CAGR são deflacionados;
   ROE, margens e dívida/PL são razões do mesmo período e a inflação se cancela.
 
-Desse bloco falta só o **P1-2** (winsorização + z-score no valuation) e o
-**P1-14** (flag `premio_negativo`). Confira no `ESTADO.md` antes de assumir
+Desse bloco falta só o **P1-14** (flag `premio_negativo`). Confira no `ESTADO.md` antes de assumir
 qualquer coisa.
 
 ## Regras de trabalho
@@ -252,17 +257,17 @@ Não são bugs a corrigir de passagem — são itens do backlog. Cite se
 atrapalharem a tarefa atual, mas não conserte fora de hora.
 
 - Coleta roda 24h, inclusive fora do pregão, poluindo a série (P0-5).
-- `normalizar()` faz `fillna(median)`: dado faltante vira nota média em
-  silêncio, sem aviso (P1-13).
-- Min-max sem tratamento de outlier nas categorias ainda não migradas; o pior
-  colocado sempre tira exatamente 0 e o melhor 100, o que é artefato e não
-  informação (P1-2, P1-11).
+- **A winsorização p5/p95 quase não morde com 10 tickers.** Não é defeito da
+  implementação, é aritmética de percentil: com n pequeno, p95 cai *entre* o
+  extremo e o vizinho dele, não dentro do grupo. Medido: um outlier de 900
+  numa série de 10 é puxado só até 503; com 30 tickers, até 37,6. Hoje quem
+  protege o valuation de outlier é `LIMITE_YIELD` / `LIMITE_BOOK_TO_MARKET`,
+  que cortam antes. A winsorização é a segunda linha e só passa a valer de
+  verdade com a whitelist maior (P1-8). Coberto pelo `teste_35`.
 - `score_reversao` com janela parcial ainda é frágil: hoje são 63 de 252
   pregões, e quem está na mínima tira exatamente 100. A janela e o mínimo já
   são explícitos (P1-3 feito) e o ranking mostra `63/252`, mas só o tempo
   enche a janela.
-- Book-to-market não tem teto para P/VP próximo de zero — o earnings yield tem.
-  Será resolvido de forma geral pela winsorização (P1-2).
 - Whitelist pequena para normalização relativa e PCA terem significado
   estatístico (P1-8).
 - `pausado` e `encerrar` são globais compartilhadas entre threads sem

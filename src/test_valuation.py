@@ -23,7 +23,7 @@ from scoring import (
     LIMITE_BOOK_TO_MARKET,
     LIMITE_YIELD,
     adicionar_metricas_valuation,
-    normalizar,
+    nota_relativa,
 )
 
 
@@ -32,7 +32,7 @@ def score_valuation(df):
     derivado = adicionar_metricas_valuation(df)
     scores = pd.DataFrame(index=derivado.index)
     for indicador in PESOS_INDICADOR["valuation"]:
-        scores[indicador] = normalizar(derivado[indicador], MAIOR_MELHOR[indicador])
+        scores[indicador] = nota_relativa(derivado[indicador], MAIOR_MELHOR[indicador])
     return scores.mean(axis=1)
 
 
@@ -183,17 +183,24 @@ def teste_09_contrato_da_categoria():
     derivado = adicionar_metricas_valuation(montar({"A": (10.0, 2.0)}))
     assert "pl" in derivado.columns and "pvp" in derivado.columns
 
-    # normalizar() continua min-max 0-100...
+    # o P1-2 trocou o min-max por winsorizacao + z-score + CDF: a escala
+    # continua 0-100 e relativa ao universo, mas sem amarrar as pontas
     serie = pd.Series([1.0, 2.0, 3.0], index=["a", "b", "c"])
-    assert list(normalizar(serie, True)) == [0.0, 50.0, 100.0]
+    notas = nota_relativa(serie, True)
+    assert notas["a"] < notas["b"] < notas["c"], "a ordem tem que sobreviver"
+    assert 0.0 < notas["a"] and notas["c"] < 100.0, (
+        "voltou o min-max: o pior tirando 0 exato e o melhor 100 exato e "
+        "artefato de escala, nao informacao. E o aceite do P1-2"
+    )
+    assert abs(notas["b"] - 50.0) < 1e-9, "o do meio e a media, logo neutro"
 
-    # ...mas o P1-13 tirou o fillna(median): ausente continua ausente, em vez
-    # de virar nota media em silencio
-    com_buraco = normalizar(pd.Series([1.0, np.nan, 3.0]), True)
+    # e o P1-13 segue valendo: ausente continua ausente, em vez de virar nota
+    # media em silencio
+    com_buraco = nota_relativa(pd.Series([1.0, np.nan, 3.0]), True)
     assert pd.isna(com_buraco[1]), (
         "dado ausente virou nota -- era o fillna(median) que o P1-13 removeu"
     )
-    assert list(com_buraco[[0, 2]]) == [0.0, 100.0], (
+    assert list(com_buraco[[0, 2]]) == list(nota_relativa(pd.Series([1.0, 3.0]), True)), (
         "o ausente nao pode mais influenciar a escala dos presentes"
     )
 

@@ -18,6 +18,8 @@ contra; a migracao e o bloco P1-11 -> P1-12 -> P1-13 -> P1-2 -> P1-14.
 O P1-1 so moveu o codigo de lugar, sem mudar uma conta.
 """
 
+import math
+
 import numpy as np
 import pandas as pd
 
@@ -47,8 +49,18 @@ PESOS_INDICADOR = {
 CATEGORIAS_ABSOLUTAS = ("rentabilidade", "margens", "crescimento", "seguranca")
 
 # Valuation e a excecao, e continua RELATIVA ao universo: "caro" so existe em
-# comparacao. Hoje por min-max; o P1-2 troca por winsorizacao + z-score.
+# comparacao. Desde o P1-2: winsorizacao + z-score + CDF, em nota_relativa().
 CATEGORIAS_RELATIVAS = ("valuation",)
+
+# Percentis de corte da winsorizacao (P1-2). Valor fora da faixa nao e
+# descartado -- e puxado ate a borda, continuando a ser o extremo da serie sem
+# ancorar a escala dos outros. Quem descarta o impossivel e o validacao.py;
+# aqui o valor e plausivel, so esta longe.
+#
+# Com a whitelist de hoje (10 tickers) isto corta exatamente 2 valores, o
+# minimo e o maximo, e so parcialmente -- p5 de 10 pontos cai entre o 1o e o
+# 2o. O efeito cresce junto com a whitelist (P1-8).
+PERCENTIL_WINSOR = 0.05
 
 # Direcao das metricas relativas. As absolutas nao precisam disso: a direcao
 # ja esta na ordem das notas das ancoras.
@@ -111,10 +123,10 @@ def adicionar_metricas_valuation(df):
 
     P/L ou P/VP igual a zero implicaria preco zero (lucro zero manda o P/L para
     o infinito, nao para zero), logo e dado corrompido e nao informacao
-    economica: vira NaN e cai no fillna(median) de normalizar(), junto com os
-    valores ausentes. Valores muito proximos de zero pelo lado positivo geram
-    yield gigante -- o clip no teto de cada metrica impede que um unico ticker
-    achate todos os outros na normalizacao.
+    economica: vira NaN e nao pontua, junto com os valores ausentes. Valores
+    muito proximos de zero pelo lado positivo geram yield gigante -- o clip no
+    teto de cada metrica e a primeira defesa, e a winsorizacao de
+    nota_relativa() e a segunda.
     """
     df = df.copy()
     for coluna_banco, coluna_derivada, teto in METRICAS_VALUATION:
@@ -123,33 +135,81 @@ def adicionar_metricas_valuation(df):
     return df
 
 
-def normalizar(valor, maior_melhor):
-    """Min-max 0-100. Dado ausente continua ausente (P1-13).
+def _cdf_normal(z):
+    """Phi(z): a area da normal padrao ate z, de 0 a 1.
 
-    Antes isto fazia fillna(valor.median()): quem nao tinha o indicador
-    recebia nota media em silencio, e nada no ranking indicava a diferenca
-    entre "mediano" e "nao sabemos". Agora o ausente nao pontua e some da
-    conta da categoria, e a cobertura aparece no ranking.
-
-    O min e o max tambem passam a ignorar o ausente, entao um indicador
-    faltante deixa de influenciar a escala dos outros.
+    Via math.erf da biblioteca padrao, para nao introduzir o scipy so por uma
+    funcao. Phi(z) = (1 + erf(z/raiz(2))) / 2.
     """
-    minimo, maximo = valor.min(), valor.max()
-    if pd.isna(minimo) or minimo == maximo:
-        # serie toda ausente, ou todos iguais: nota neutra para quem tem
-        # valor, ausente para quem nao tem
+    return 0.5 * (1 + math.erf(z / math.sqrt(2)))
+
+
+def nota_relativa(valor, maior_melhor):
+    """Nota 0-100 comparando com o universo: winsoriza, z-score, CDF (P1-2).
+
+    Era min-max ate o P1-2, e o min-max tinha um defeito estrutural: o pior
+    colocado tirava EXATAMENTE 0 e o melhor EXATAMENTE 100, sempre, fossem
+    quais fossem os numeros. Isso e artefato de escala, nao informacao -- com
+    dois tickers quase empatados nas pontas, a distancia entre eles aparecia
+    como 100 pontos de nota. Pior: um unico outlier esticava a regua e
+    espremia todos os outros no meio.
+
+    Os tres passos:
+
+    1. WINSORIZAR em p5/p95. O extremo e puxado ate a borda, nao removido --
+       continua sendo o maior da serie, mas para de definir sozinho a escala.
+    2. Z-SCORE sobre o ja winsorizado, com media e desvio tambem do
+       winsorizado. A nota passa a dizer "quantos desvios acima da media do
+       universo", que e uma afirmacao com conteudo, em vez de "a que fracao
+       do caminho entre o pior e o melhor".
+    3. CDF NORMAL para voltar a 0-100. O z nao tem limite e a escala precisa
+       ter, entao falta um mapeamento. A alternativa era cortar em +-2 desvios
+       e esticar linearmente, mas ai todo mundo alem de 2 desvios volta a
+       empatar em 0 e 100 exatos -- justamente o que este item veio tirar.
+       Com 10 tickers ninguem passa de 2 desvios e as duas opcoes empatam; com
+       30 (P1-8) o corte linear voltaria a amarrar as pontas. A CDF nunca
+       chega a 0 nem a 100.
+
+    Usar a CDF NAO afirma que o indicador e normalmente distribuido. Ela entra
+    como funcao de achatamento monotona e limitada -- preserva a ordem e
+    devolve algo que se le como percentil. Nota 96 quer dizer "mais barato que
+    ~96% do universo", nao "esta a tantos desvios numa normal".
+
+    O desvio usa ddof=0: a whitelist e a populacao inteira que interessa, nao
+    uma amostra de um universo maior.
+
+    Dado ausente continua ausente (P1-13), e nao entra em nenhum dos tres
+    passos -- nao mexe nos percentis, na media nem no desvio.
+    """
+    valor = pd.to_numeric(valor, errors="coerce")
+    presentes = valor.dropna()
+
+    if presentes.empty:
+        return pd.Series(np.nan, index=valor.index, dtype=float)
+
+    corte_baixo = presentes.quantile(PERCENTIL_WINSOR)
+    corte_alto = presentes.quantile(1 - PERCENTIL_WINSOR)
+    winsorizado = valor.clip(corte_baixo, corte_alto)
+
+    desvio = winsorizado.std(ddof=0)
+    if pd.isna(desvio) or desvio == 0:
+        # todos iguais (ou um so ticker): nao ha comparacao a fazer, entao
+        # nota neutra para quem tem valor e ausente para quem nao tem
         return pd.Series(
             [np.nan if pd.isna(v) else 50.0 for v in valor], index=valor.index
         )
 
-    normalizado = (valor - minimo) / (maximo - minimo) * 100
-    return normalizado if maior_melhor else 100 - normalizado
+    z = (winsorizado - winsorizado.mean()) / desvio
+    if not maior_melhor:
+        z = -z
+
+    return z.map(lambda v: np.nan if pd.isna(v) else 100 * _cdf_normal(v))
 
 
 def _mascarar_nao_aplicaveis(df):
     """Transforma em ausente o indicador que nao se aplica ao setor (P1-12).
 
-    Acontece ANTES de normalizar, de proposito: um valor inaplicavel nao pode
+    Acontece ANTES de pontuar, de proposito: um valor inaplicavel nao pode
     nem virar nota nem ancorar a escala dos outros. A divida/PL de 5,13 do
     BBAS3 e alavancagem normal de banco, nao defeito -- mas, deixada na
     coluna, ela estica o min-max e muda a nota de seguranca de todo mundo.
@@ -236,7 +296,7 @@ def calcular_score_fundamentalista(fundamentos):
                     lambda valor, ind=indicador: faixas.nota(ind, valor)
                 )
             else:
-                df[col_score] = normalizar(df[indicador], MAIOR_MELHOR[indicador])
+                df[col_score] = nota_relativa(df[indicador], MAIOR_MELHOR[indicador])
 
             pesos_por_coluna[col_score] = peso
 

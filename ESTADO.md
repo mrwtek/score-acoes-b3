@@ -152,6 +152,32 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       5,89%. Um deflator dinâmico custaria notas se mexendo todo mês sem a
       empresa ter mudado — o ruído que o P1-11 acabou de tirar.
 
+- [x] **P1-2** `normalizar()` (min-max) virou `nota_relativa()`:
+      winsorização em p5/p95, z-score sobre o winsorizado e CDF normal para
+      voltar a 0–100. Vale só no valuation, que é a única categoria relativa.
+      A CDF sai do `math.erf` da biblioteca padrão — sem dependência nova.
+
+      **Aceite cumprido.** Nas pontas, antes e depois:
+
+          earnings_yield    VALE3    0,00 -> 4,35     PETR4  100,00 -> 96,03
+          book_to_market    WEGE3    0,00 -> 6,65     BBAS3  100,00 -> 96,12
+
+      A ordem do ranking não mudou; as notas de valuation de todos os 10
+      mudaram. A nota agora se lê como percentil.
+
+      **Escolhida a CDF em vez de corte linear em ±2 desvios.** Com 10 tickers
+      ninguém passa de 2 desvios e as duas opções cumprem o aceite igual; com
+      30 (P1-8) o corte linear voltaria a amarrar as pontas em 0 e 100 exatos.
+
+      **Limitação medida, e importante:** a winsorização p5/p95 quase não faz
+      efeito com 10 tickers — p95 cai entre o 9º valor e o 10º, então um
+      outlier de 900 é puxado só até 503. Com 30 tickers vai até 37,6. Hoje
+      quem segura outlier no valuation é o `LIMITE_YIELD` /
+      `LIMITE_BOOK_TO_MARKET`, que cortam antes; a winsorização é a segunda
+      linha e só passa a valer com a whitelist maior. Está no `teste_35`, que
+      falha se um dia ela começar a morder (sinal de que o comentário
+      envelheceu).
+
 ### Limpeza de 26/10/2026 (ao retomar o projeto)
 Três coisas estavam fora do lugar depois de ~7 semanas parado:
 - `ESTADO.md` no disco tinha regredido para a versão de 02/09; restaurado da
@@ -166,7 +192,7 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] nada — próxima é **P1-2**
+- [ ] nada — próxima é **P1-14**
 
 ---
 
@@ -179,8 +205,6 @@ Todo o bloco de score vem **antes** do P1-4, para não gravar snapshots numa
 escala que será trocada.
 
 ### Bloco de score (o miolo da revisão)
-- [ ] **P1-2** winsorização (p5/p95) + z-score no valuation
-      *Aceite:* o pior colocado deixa de tirar exatamente 0.0.
 - [ ] **P1-14** flag `premio_negativo` quando earnings yield < Selic
 
 ### Universo
