@@ -114,7 +114,8 @@ Os arquivos: `dim_ativo`, `f_preco_diario`, `f_indice`, `f_fundamento`,
 do dia, e é daí que vai sair o gráfico de evolução de score daqui a alguns
 meses. Rodar duas vezes no mesmo dia reescreve o dia, não duplica.
 
-**No Power BI:** Obter dados → Pasta → `exports\bi`. Os CSVs saem no padrão
+**No Power BI:** o passo a passo da primeira conexão, os relacionamentos e as
+medidas DAX estão no `POWERBI.md` da raiz. Os CSVs saem no padrão
 brasileiro (separador `;`, decimal `,`), que é o que o Power BI em português
 importa sem pedir ajuste. Se os números chegarem como texto, o seu Power BI
 está em outra localidade: troque `SEPARADOR` e `DECIMAL` no topo do
@@ -268,8 +269,12 @@ digite `buy` ou `sell` com os dados da operação.
 cd src
 python exportar_bi.py
 ```
-depois, no Power BI: Obter dados → Pasta → `exports\bi` → Combinar e
-Transformar. Se o relatório já existe, basta **Atualizar**.
+Se o relatório já existe, basta **Atualizar** no Power BI depois disso.
+
+Montando pela primeira vez: o passo a passo está no **`POWERBI.md`** da raiz,
+com as medidas DAX prontas para colar. Não use o botão "Combinar e
+Transformar" do conector de Pasta — os nove CSVs têm colunas diferentes, e
+combinar empilharia tudo numa tabela só. É uma consulta por arquivo.
 
 Rode a exportação sempre **depois** da coleta, nunca antes — senão o Power BI
 mostra o dia anterior com cara de hoje.

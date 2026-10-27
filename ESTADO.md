@@ -121,6 +121,12 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       no `f_score` porque `calcular_ranking()` parte dos fundamentos e eles
       não têm. Ficam contados em `meta_exportacao.csv` em vez de entrar com
       nota inventada.
+      `POWERBI.md` na raiz tem o passo a passo da primeira conexão, os
+      relacionamentos e as medidas DAX prontas — inclusive as três que não se
+      deve relacionar ao calendário (`f_posicao` e `f_tese` são estado, não
+      período) e o que ainda não dá para montar (evolução de score só a
+      partir do primeiro snapshot; resultado realizado não é calculável, o
+      preço médio antigo não é guardado em nenhuma transação).
 
 - [x] **AFINAR-FAIXAS** as âncoras de crescimento viraram **termos reais**.
       Os dois CAGR chegam nominais da BolsAI e `faixas.nota()` deflaciona

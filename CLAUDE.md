@@ -14,6 +14,7 @@ Metodologia do score: **seção 7A do PRD** — leia antes de mexer em scoring
 Onde parei / próxima tarefa: `ESTADO.md`
 Por que as coisas são como são: `DECISOES.md`
 O que cada comando faz e como rodar: `COMANDOS.md`
+Como ligar o Power BI nos dados: `POWERBI.md`
 
 ## Quem sou eu
 
