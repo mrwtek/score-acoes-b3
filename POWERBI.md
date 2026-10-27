@@ -16,7 +16,82 @@ O que cada comando faz está no `COMANDOS.md`. Por que a camada existe, no
 
 ---
 
-## 1. Primeira conexão
+## 0. Estado atual — o painel já existe
+
+Em 26/10/2026 o relatório foi montado e está em `Power BI/`:
+
+```
+Power BI/
+  .PBIP/                      formato de pasta, em texto -- é o que se edita
+    Painel Analise B3.pbip        abra ESTE arquivo no Power BI Desktop
+    Painel Analise B3.Report/     páginas e visuais, um JSON por visual
+    Painel Analise B3.SemanticModel/
+      definition/tables/*.tmdl    uma tabela por arquivo
+      definition/_Medidas.tmdl    as 32 medidas
+      definition/relationships.tmdl
+      definition/expressions.tmdl parâmetro PastaBI e função fnLerBI
+  .PBIX/
+    Painel Analise B3.pbix      mesmo painel, em arquivo único binário
+```
+
+**O que já está pronto**, conferido contra os arquivos do projeto:
+
+- As 9 consultas, carregadas pela `fnLerBI` a partir do parâmetro `PastaBI`.
+- Tipagem correta: `data` como `dateTime`, valores como `double`, `volume`
+  como `int64`. A cultura do modelo é `pt-BR`, que é o que faz o decimal com
+  vírgula entrar como número.
+- `dim_calendario` como tabela calculada, marcada como tabela de data.
+- Os 11 relacionamentos, e — importante — **nenhum** dos três que a seção 1.7
+  manda não criar.
+- As 32 medidas, com formatação aplicada (percentual, data, inteiro).
+- 3 das 6 telas: **Carteira**, **Desempenho contra benchmark** e **Ranking**.
+
+**O que falta**: as telas 3.4 (Ficha do ativo), 3.5 (Diário de teses) e 3.6
+(Saúde dos dados). Na tela de benchmark falta a segmentação por período —
+hoje só existe a de ticker.
+
+### 0.1 Para abrir
+
+Abra `Power BI/.PBIP/Painel Analise B3.pbip`, não o `.pbix`. O `.pbip` é a
+mesma coisa em texto: dá para ver num diff do git o que mudou numa medida,
+coisa que o `.pbix` não permite por ser binário.
+
+O relatório aponta para o modelo por caminho relativo, então mover a pasta
+inteira não quebra nada. **Só o parâmetro `PastaBI` é absoluto**
+(`C:\Users\Dimlu\app-b3\exports\bi`): em outra máquina, mude o parâmetro em
+Transformar dados → Gerenciar Parâmetros.
+
+### 0.2 O que não deve ir para o git
+
+Dois arquivos dentro de `.PBIP/*/.pbi/`:
+
+- `cache.abf` — cache dos dados do modelo (177 KB hoje, e cresce junto com a
+  série). É gerado de novo sozinho.
+- `localSettings.json` — guarda uma assinatura criptografada presa a esta
+  máquina e a este usuário. Em outro computador ela não vale nada.
+
+Sugestão para o `.gitignore`:
+
+```
+Power BI/.PBIP/**/.pbi/cache.abf
+Power BI/.PBIP/**/.pbi/localSettings.json
+```
+
+**Sobre o `.pbix`:** ele e o `.pbip` são o mesmo painel. Versionar os dois
+significa que toda alteração entra duas vezes, uma legível e outra como
+binário opaco — e, pior, os dois podem divergir sem aviso se um dia você
+salvar só um. O caminho mais limpo é versionar o `.PBIP/` e ignorar o
+`.PBIX/`, gerando o `.pbix` só quando precisar mandar o arquivo para alguém.
+Se você preferir manter os dois versionados, a regra passa a ser salvar
+sempre nos dois formatos na mesma sessão. É escolha sua — hoje nenhum dos
+dois está no `.gitignore`.
+
+---
+
+## 1. Primeira conexão (ou reconstrução do zero)
+
+**Já está feito** — esta seção fica como registro de como o modelo foi
+montado, e para o dia em que for preciso refazer numa máquina nova.
 
 ### 1.1 Antes de importar: localidade do arquivo
 
@@ -484,7 +559,9 @@ Ativos na carteira = CALCULATE ( DISTINCTCOUNT ( f_posicao[ticker] ), f_posicao[
 
 ## 3. Telas
 
-### 3.1 Carteira
+Estado em 26/10/2026: **3.1, 3.2 e 3.3 montadas**; 3.4, 3.5 e 3.6 ainda não.
+
+### 3.1 Carteira — FEITA
 
 Cartões: `Valor de mercado`, `Custo`, `Resultado não realizado`,
 `Resultado não realizado %`, `Ativos na carteira`.
@@ -494,7 +571,10 @@ Rosca de `Valor de mercado` por `dim_ativo[setor]`.
 Tabela: ticker, `Quantidade`, `f_posicao[preco_medio]`, `Preço`,
 `Valor de mercado`, `Resultado não realizado %`.
 
-### 3.2 Desempenho contra benchmark
+Montada com os cinco cartões, as barras de resultado por ticker, as duas
+roscas (por classe e por setor) e a tabela de posições.
+
+### 3.2 Desempenho contra benchmark — FEITA, falta o filtro de período
 
 Gráfico de linhas com `dim_calendario[Date]` no eixo e as três medidas base
 100. Segmentação por `dim_ativo[ticker]` e por período.
@@ -503,7 +583,16 @@ Cartões: `Retorno do ativo %`, `Retorno IBOV %`, `Retorno CDI %`,
 Caixa de texto com `Fim comparável`, para ficar explícito até onde a
 comparação vale.
 
-### 3.3 Ranking
+A caixa de texto com o `Fim comparável` ficou como valor dinâmico, que é o
+jeito certo — ela acompanha o dado em vez de envelhecer.
+
+Falta a segmentação por período. Sem ela, todas as medidas de retorno sempre
+olham a série inteira, e as três medidas `base 100` nunca são reancoradas:
+elas usam `ALLSELECTED(dim_calendario)`, que existe justamente para responder
+a um filtro de data. Acrescente uma segmentação de `dim_calendario[Date]` no
+modo Entre.
+
+### 3.3 Ranking — FEITA
 
 Tabela: ticker, setor, `Score fundamentalista`, `Score de reversão`,
 `Cobertura`, `Janela de reversão`, e as categorias (`valuation`,
@@ -515,20 +604,23 @@ pelo `Valor de mercado`. O canto superior direito é "empresa boa que caiu";
 o inferior direito, "caiu e não era boa". Lê os dois scores lado a lado sem
 somá-los — que é exatamente o que o P1-13 decidiu ao remover o `score_geral`.
 
-### 3.4 Ficha do ativo
+Montada com a dispersão e a tabela, incluindo `Cobertura` e
+`Janela de reversão` ao lado das notas.
+
+### 3.4 Ficha do ativo — A FAZER
 
 Drill-through por `dim_ativo[ticker]`. Linha de `Preço` no tempo; tabela de
 `f_fundamento` filtrada por `mais_recente = True`; `f_transacao` do papel;
 `f_tese` do papel.
 
-### 3.5 Diário de teses
+### 3.5 Diário de teses — A FAZER
 
 Tabela de `f_tese`: ticker, data de abertura, premissa, critério,
 `Dias restantes`, `Retorno da tese %`, `Tese vs IBOV (p.p.)`,
 `Tese vs CDI (p.p.)`, status.
 Filtro por `status`. Cartão com `Teses abertas`.
 
-### 3.6 Saúde dos dados
+### 3.6 Saúde dos dados — A FAZER
 
 Tabela de `meta_exportacao` inteira — é o que ela existe para ser.
 Cartões: `Exportado em`, `Última cotação`, `Dias desde a última cotação`,
@@ -605,3 +697,20 @@ as linhas porque nunca foi preenchida, não porque a corretagem foi zero. O
 
 **Atualizar o Power BI não atualiza os dados.** O botão lê os CSVs. Para ter
 dado novo, rode a coleta e depois o `exportar_bi.py`, nessa ordem.
+
+**Mexeu no scoring? Reexporte antes de atualizar o painel.** O `f_score.csv`
+congela a nota do dia, e uma mudança de metodologia muda a régua sem mudar a
+empresa. Já aconteceu duas vezes em 26/10/2026: o AFINAR-FAIXAS (`e95715a`) e
+o P1-2 (`7f1c735`) entraram com o snapshot do dia já gravado na escala
+anterior. Nos dois casos bastou rodar o `exportar_bi.py` de novo, porque o
+append é idempotente por dia — mas isso só funciona enquanto a mudança e o
+snapshot são do mesmo dia. É o que o item **VERSAO-SCORE** do backlog
+resolve.
+
+**A nota de valuation agora é percentil, não posição numa régua fixa.** Desde
+o P1-2 ela sai de winsorização + z-score + CDF: 96 quer dizer "mais barato
+que cerca de 96% do universo de hoje". Duas consequências para os visuais:
+comparar valuation entre snapshots de dias diferentes só vale se o universo
+for o mesmo, e ninguém tira 0,0 nem 100,0 exatos — se aparecer, é bug. As
+outras quatro categorias continuam em faixa absoluta e são comparáveis no
+tempo.

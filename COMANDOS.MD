@@ -269,12 +269,20 @@ digite `buy` ou `sell` com os dados da operação.
 cd src
 python exportar_bi.py
 ```
-Se o relatório já existe, basta **Atualizar** no Power BI depois disso.
+Depois abra **`Power BI/.PBIP/Painel Analise B3.pbip`** e clique em
+**Atualizar**. O painel já está montado (Carteira, Desempenho contra
+benchmark e Ranking); o que ele tem e o que falta está no `POWERBI.md`.
 
-Montando pela primeira vez: o passo a passo está no **`POWERBI.md`** da raiz,
-com as medidas DAX prontas para colar. Não use o botão "Combinar e
-Transformar" do conector de Pasta — os nove CSVs têm colunas diferentes, e
-combinar empilharia tudo numa tabela só. É uma consulta por arquivo.
+Abra o `.pbip`, não o `.pbix`. Os dois são o mesmo painel, mas o `.pbip` é
+texto e aparece num diff do git — dá para ver o que mudou numa medida.
+
+**Mexeu no scoring?** Rode o `exportar_bi.py` de novo antes de atualizar o
+painel. O `f_score.csv` congela a nota do dia, e trocar a metodologia troca a
+régua sem a empresa ter mudado. Já aconteceu duas vezes em 26/10/2026.
+
+Montando do zero numa máquina nova: o passo a passo está no `POWERBI.md`, com
+as medidas DAX prontas para colar. Lá também está o que ajustar — só o
+parâmetro `PastaBI` tem caminho absoluto.
 
 Rode a exportação sempre **depois** da coleta, nunca antes — senão o Power BI
 mostra o dia anterior com cara de hoje.

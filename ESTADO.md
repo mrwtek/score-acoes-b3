@@ -192,7 +192,31 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] nada — próxima é **P1-14**
+- [ ] **Painel do Power BI** — montado em 26/10/2026 em `Power BI/`, nos dois
+      formatos (`.PBIP/` em texto, `.PBIX/` binário). Abre-se pelo
+      `Painel Analise B3.pbip`.
+
+      **Pronto:** as 9 consultas via `fnLerBI` + parâmetro `PastaBI`, tipagem
+      e cultura pt-BR (é o que faz o decimal com vírgula entrar como número),
+      `dim_calendario` marcada como tabela de data, os 11 relacionamentos —
+      e nenhum dos três que o `POWERBI.md` §1.7 manda não criar —, as 32
+      medidas com formatação, e 3 das 6 telas: Carteira, Desempenho contra
+      benchmark e Ranking.
+
+      **Falta:** telas de Ficha do ativo (§3.4), Diário de teses (§3.5) e
+      Saúde dos dados (§3.6), mais a segmentação por período na tela de
+      benchmark. Essa última não é enfeite: as três medidas `base 100` usam
+      `ALLSELECTED(dim_calendario)`, então sem um filtro de data elas nunca
+      são reancoradas e o gráfico só sabe mostrar a série inteira.
+
+      **Decisão pendente, sua:** `.PBIP/` e `.PBIX/` são o mesmo painel e os
+      dois estão fora do `.gitignore` — versionar ambos faz cada alteração
+      entrar duas vezes e permite que divirjam em silêncio. Já `cache.abf` e
+      `localSettings.json` não deveriam ser versionados de jeito nenhum: um é
+      cache de dados que se regenera, o outro é assinatura presa a esta
+      máquina e a este usuário. Ver `POWERBI.md` §0.2.
+
+- [ ] próxima tarefa de código: **P1-14**
 
 ---
 

@@ -66,6 +66,11 @@ trade-off antes de decidir por mim.
       backups/                cópias automáticas com timestamp
     notebooks/
       analise.ipynb           pesquisa livre (PCA, ADF, ACF/PACF, ARIMA)
+    exports/bi/               CSVs que o `exportar_bi.py` gera; fora do git
+    Power BI/
+      .PBIP/                  o painel em formato de pasta, em texto — é o
+                              que se abre e se edita (`Painel Analise B3.pbip`)
+      .PBIX/                  o mesmo painel em arquivo único binário
     .env                      NA RAIZ, não em subpasta (já causou bug)
 
 A criar conforme o backlog: `carteira.py`, `sinais.py`,
