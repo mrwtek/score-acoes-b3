@@ -83,11 +83,8 @@ table f_preco_diario
 		mode: import
 		source =
 				let
-				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_preco_diario csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_preco_diario.csv"]}[Content],
-				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_preco_diario csv",[Delimiter=";", Columns=8, Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
-				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"ticker", type text}, {"data", type date}, {"abertura", type number}, {"maxima", type number}, {"minima", type number}, {"fechamento", type number}, {"fechamento_ajustado", type number}, {"volume", Int64.Type}})
+				    Origem = fnLerBI("f_preco_diario.csv"),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(Origem,{{"ticker", type text}, {"data", type date}, {"abertura", type number}, {"maxima", type number}, {"minima", type number}, {"fechamento", type number}, {"fechamento_ajustado", type number}, {"volume", Int64.Type}})
 				in
 				    #"Tipo Alterado"
 

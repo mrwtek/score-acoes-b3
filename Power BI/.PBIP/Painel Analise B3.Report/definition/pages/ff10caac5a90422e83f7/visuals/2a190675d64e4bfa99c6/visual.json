@@ -28,6 +28,62 @@
               },
               "queryRef": "_Medidas.Teses abertas",
               "nativeQueryRef": "Teses abertas"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Retorno da tese %"
+                }
+              },
+              "queryRef": "_Medidas.Retorno da tese %",
+              "nativeQueryRef": "Retorno da tese %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Tese vs IBOV (p.p.)"
+                }
+              },
+              "queryRef": "_Medidas.Tese vs IBOV (p.p.)",
+              "nativeQueryRef": "Tese vs IBOV (p.p.)"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Tese vs CDI (p.p.)"
+                }
+              },
+              "queryRef": "_Medidas.Tese vs CDI (p.p.)",
+              "nativeQueryRef": "Tese vs CDI (p.p.)"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Dias restantes"
+                }
+              },
+              "queryRef": "_Medidas.Dias restantes",
+              "nativeQueryRef": "Dias restantes"
             }
           ]
         }

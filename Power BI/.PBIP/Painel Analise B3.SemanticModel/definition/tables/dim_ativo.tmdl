@@ -65,11 +65,8 @@ table dim_ativo
 		mode: import
 		source =
 				let
-				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-				    #"C:\Users\Dimlu\app-b3\exports\bi\_dim_ativo csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="dim_ativo.csv"]}[Content],
-				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_dim_ativo csv",[Delimiter=";", Columns=7, Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
-				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"ticker", type text}, {"setor", type text}, {"classe", type text}, {"em_carteira", type logical}, {"na_whitelist_base", type logical}, {"setor_mapeado", type logical}, {"indicadores_nao_aplicaveis", Int64.Type}})
+				    Origem = fnLerBI("dim_ativo.csv"),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(Origem,{{"ticker", type text}, {"setor", type text}, {"classe", type text}, {"em_carteira", type logical}, {"na_whitelist_base", type logical}, {"setor_mapeado", type logical}, {"indicadores_nao_aplicaveis", Int64.Type}})
 				in
 				    #"Tipo Alterado"
 

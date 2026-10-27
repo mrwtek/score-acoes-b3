@@ -83,7 +83,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column data_encerramento
-		dataType: string
+		dataType: dateTime
 		lineageTag: 0e87b32d-851f-4096-a6b5-37629a4bfb36
 		summarizeBy: none
 		sourceColumn: data_encerramento
@@ -108,7 +108,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column medido_ate
-		dataType: string
+		dataType: dateTime
 		lineageTag: ee14096e-d641-445b-a07a-771689de7b5b
 		summarizeBy: none
 		sourceColumn: medido_ate
@@ -116,7 +116,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column preco_atual
-		dataType: string
+		dataType: double
 		lineageTag: 5f3c8a3b-28fd-4137-a38d-6663c1e0a079
 		summarizeBy: none
 		sourceColumn: preco_atual
@@ -124,7 +124,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column retorno
-		dataType: string
+		dataType: double
 		lineageTag: c5ade24c-94a0-4189-930a-bc9a81e93955
 		summarizeBy: none
 		sourceColumn: retorno
@@ -132,7 +132,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column ibov
-		dataType: string
+		dataType: double
 		lineageTag: 717c1dc3-fa35-4e24-943c-ed8ef19791ba
 		summarizeBy: none
 		sourceColumn: ibov
@@ -140,7 +140,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column cdi
-		dataType: string
+		dataType: double
 		lineageTag: 6fae350f-47a3-4600-8a18-50da4479abcf
 		summarizeBy: none
 		sourceColumn: cdi
@@ -148,7 +148,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column vs_ibov
-		dataType: string
+		dataType: double
 		lineageTag: 2c489e4d-1c92-44e2-bd7a-0aa87dbb58d8
 		summarizeBy: none
 		sourceColumn: vs_ibov
@@ -156,7 +156,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column vs_cdi
-		dataType: string
+		dataType: double
 		lineageTag: 973a619c-638b-4a16-a181-74e0712a073e
 		summarizeBy: none
 		sourceColumn: vs_cdi
@@ -164,7 +164,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column dias_corridos
-		dataType: string
+		dataType: int64
 		lineageTag: 83d0dbe0-f6cf-4cfd-9fb2-3e26d00eda03
 		summarizeBy: none
 		sourceColumn: dias_corridos
@@ -172,7 +172,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column dias_restantes
-		dataType: string
+		dataType: int64
 		lineageTag: e3516308-3a15-4c43-95a8-10758ce65312
 		summarizeBy: none
 		sourceColumn: dias_restantes
@@ -180,7 +180,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column vencimento
-		dataType: string
+		dataType: dateTime
 		lineageTag: a91c1ca9-0e51-438b-9377-707c40aa4f43
 		summarizeBy: none
 		sourceColumn: vencimento
@@ -188,7 +188,7 @@ table f_tese
 		annotation SummarizationSetBy = Automatic
 
 	column vencida
-		dataType: string
+		dataType: boolean
 		lineageTag: ed2190ac-971d-48e3-8ed8-1341d32255a4
 		summarizeBy: none
 		sourceColumn: vencida
@@ -199,11 +199,8 @@ table f_tese
 		mode: import
 		source =
 				let
-				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_tese csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_tese.csv"]}[Content],
-				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_tese csv",[Delimiter=";", Columns=23, Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
-				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"id", Int64.Type}, {"ticker", type text}, {"data_abertura", type date}, {"preco_abertura", type number}, {"premissa", type text}, {"criterio", type text}, {"horizonte_dias", Int64.Type}, {"score_abertura", type number}, {"status", type text}, {"data_encerramento", type text}, {"veredito", type text}, {"criado_em", type datetime}, {"medido_ate", type text}, {"preco_atual", type text}, {"retorno", type text}, {"ibov", type text}, {"cdi", type text}, {"vs_ibov", type text}, {"vs_cdi", type text}, {"dias_corridos", type text}, {"dias_restantes", type text}, {"vencimento", type text}, {"vencida", type text}})
+				    Origem = fnLerBI("f_tese.csv"),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(Origem,{{"id", Int64.Type}, {"ticker", type text}, {"data_abertura", type date}, {"preco_abertura", type number}, {"premissa", type text}, {"criterio", type text}, {"horizonte_dias", Int64.Type}, {"score_abertura", type number}, {"status", type text}, {"data_encerramento", type date}, {"veredito", type text}, {"criado_em", type datetime}, {"medido_ate", type date}, {"preco_atual", type number}, {"retorno", type number}, {"ibov", type number}, {"cdi", type number}, {"vs_ibov", type number}, {"vs_cdi", type number}, {"dias_corridos", Int64.Type}, {"dias_restantes", Int64.Type}, {"vencimento", type date}, {"vencida", type logical}})
 				in
 				    #"Tipo Alterado"
 

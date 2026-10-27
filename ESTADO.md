@@ -211,23 +211,23 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
       renderiza. A de Saúde dos dados foi conferida no Desktop e abriu certa;
       as outras duas ainda não.
 
+      **Dois defeitos do modelo, corrigidos em 26/10/2026** (`POWERBI.md`
+      §0.3): as 9 consultas passaram a ler pela `fnLerBI`, então o parâmetro
+      `PastaBI` finalmente controla o caminho — antes cada uma carregava o
+      caminho absoluto no próprio M e o parâmetro não servia para nada. E as
+      12 colunas de conferência de `f_tese` deixaram de ser texto, o que
+      destravou as 4 medidas de tese. De brinde, a troca de `QuoteStyle.None`
+      para `QuoteStyle.Csv` tira as aspas que apareciam na premissa.
+      **Falta conferir com dado real:** nenhuma tese tem medição ainda.
+
       **Pendências, da que mais atrapalha para a que menos:**
-      1. As 4 medidas de tese (`Retorno da tese %`, `Tese vs IBOV`,
-         `Tese vs CDI`, `Dias restantes`) fazem `AVERAGE`/`SUM` sobre colunas
-         que a importação tipou como **texto**, porque chegaram vazias — as
-         duas teses foram abertas no mesmo dia, sem pregão para medir.
-         Reimportar não conserta: o tipo já está gravado no modelo. Corrigir
-         na consulta `f_tese`, em Transformar dados. `POWERBI.md` §0.3.
-      2. O parâmetro `PastaBI` e a função `fnLerBI` não são usados por
-         ninguém: as 9 consultas carregam o caminho absoluto dentro do M,
-         via `Folder.Files`. Numa máquina nova seriam 9 consultas para
-         editar, em vez de um parâmetro.
-      3. Falta a segmentação por período na tela de benchmark. Não é
+      1. Falta a segmentação por período na tela de benchmark. Não é
          enfeite: as três medidas `base 100` usam
          `ALLSELECTED(dim_calendario)`, então sem filtro de data elas nunca
          são reancoradas e o gráfico só sabe mostrar a série inteira.
-      4. Os dois gráficos de rosca da Carteira se sobrepõem em 222 px, e o
+      2. Os dois gráficos de rosca da Carteira se sobrepõem em 222 px, e o
          da direita encosta na borda da página.
+      3. O slicer da tela de benchmark está com seleção salva em `ITUB4`.
 
       **Versionamento decidido em 26/10/2026:** vai para o git só o `.PBIP/`,
       com os 41 arquivos de definição em texto. Ficam de fora o `.PBIX/` (o

@@ -53,11 +53,8 @@ table f_posicao
 		mode: import
 		source =
 				let
-				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_posicao csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_posicao.csv"]}[Content],
-				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_posicao csv",[Delimiter=";", Columns=5, Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
-				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"ticker", type text}, {"quantidade", Int64.Type}, {"preco_medio", type number}, {"data_atualizacao", type date}, {"custo_total", type number}})
+				    Origem = fnLerBI("f_posicao.csv"),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(Origem,{{"ticker", type text}, {"quantidade", Int64.Type}, {"preco_medio", type number}, {"data_atualizacao", type date}, {"custo_total", type number}})
 				in
 				    #"Tipo Alterado"
 

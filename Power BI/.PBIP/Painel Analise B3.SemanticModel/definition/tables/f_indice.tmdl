@@ -52,11 +52,8 @@ table f_indice
 		mode: import
 		source =
 				let
-				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_indice csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_indice.csv"]}[Content],
-				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_indice csv",[Delimiter=";", Columns=5, Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
-				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"codigo", type text}, {"data", type date}, {"valor", type number}, {"tipo", type text}, {"fator_diario", type number}})
+				    Origem = fnLerBI("f_indice.csv"),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(Origem,{{"codigo", type text}, {"data", type date}, {"valor", type number}, {"tipo", type text}, {"fator_diario", type number}})
 				in
 				    #"Tipo Alterado"
 

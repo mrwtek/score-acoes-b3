@@ -114,11 +114,8 @@ table f_transacao
 		mode: import
 		source =
 				let
-				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_transacao csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_transacao.csv"]}[Content],
-				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_transacao csv",[Delimiter=";", Columns=12, Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
-				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"id", Int64.Type}, {"ticker", type text}, {"tipo", type text}, {"quantidade", Int64.Type}, {"preco", type number}, {"data_operacao", type datetime}, {"data_operacao_iso", type datetime}, {"taxas", type text}, {"observacao", type text}, {"data", type date}, {"valor_bruto", type number}, {"valor_liquido", type number}})
+				    Origem = fnLerBI("f_transacao.csv"),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(Origem,{{"id", Int64.Type}, {"ticker", type text}, {"tipo", type text}, {"quantidade", Int64.Type}, {"preco", type number}, {"data_operacao", type datetime}, {"data_operacao_iso", type datetime}, {"taxas", type text}, {"observacao", type text}, {"data", type date}, {"valor_bruto", type number}, {"valor_liquido", type number}})
 				in
 				    #"Tipo Alterado"
 

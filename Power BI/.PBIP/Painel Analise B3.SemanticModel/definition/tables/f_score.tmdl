@@ -198,11 +198,8 @@ table f_score
 		mode: import
 		source =
 				let
-				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_score csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_score.csv"]}[Content],
-				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_score csv",[Delimiter=";", Columns=20, Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
-				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"data_snapshot", type date}, {"ticker", type text}, {"valuation", type number}, {"rentabilidade", type number}, {"margens", type number}, {"crescimento", type number}, {"seguranca", type number}, {"score_fundamentalista", type number}, {"indicadores_usados", Int64.Type}, {"indicadores_aplicaveis", Int64.Type}, {"categorias_usadas", Int64.Type}, {"pl", type number}, {"pvp", type number}, {"earnings_yield", type number}, {"book_to_market", type number}, {"preco_atual", type number}, {"score_reversao", type number}, {"observacoes", Int64.Type}, {"dados_insuficientes", type logical}, {"janela_completa", type logical}})
+				    Origem = fnLerBI("f_score.csv"),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(Origem,{{"data_snapshot", type date}, {"ticker", type text}, {"valuation", type number}, {"rentabilidade", type number}, {"margens", type number}, {"crescimento", type number}, {"seguranca", type number}, {"score_fundamentalista", type number}, {"indicadores_usados", Int64.Type}, {"indicadores_aplicaveis", Int64.Type}, {"categorias_usadas", Int64.Type}, {"pl", type number}, {"pvp", type number}, {"earnings_yield", type number}, {"book_to_market", type number}, {"preco_atual", type number}, {"score_reversao", type number}, {"observacoes", Int64.Type}, {"dados_insuficientes", type logical}, {"janela_completa", type logical}})
 				in
 				    #"Tipo Alterado"
 

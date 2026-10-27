@@ -83,11 +83,8 @@ table meta_exportacao
 		mode: import
 		source =
 				let
-				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-				    #"C:\Users\Dimlu\app-b3\exports\bi\_meta_exportacao csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="meta_exportacao.csv"]}[Content],
-				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_meta_exportacao csv",[Delimiter=";", Columns=8, Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
-				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"arquivo", type text}, {"linhas", Int64.Type}, {"data_min", type date}, {"data_max", type date}, {"janela_inicio", type date}, {"janela_fim", type date}, {"tickers_sem_score", type text}, {"exportado_em", type datetime}})
+				    Origem = fnLerBI("meta_exportacao.csv"),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(Origem,{{"arquivo", type text}, {"linhas", Int64.Type}, {"data_min", type date}, {"data_max", type date}, {"janela_inicio", type date}, {"janela_fim", type date}, {"tickers_sem_score", type text}, {"exportado_em", type datetime}})
 				in
 				    #"Tipo Alterado"
 

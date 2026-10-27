@@ -152,11 +152,8 @@ table f_fundamento
 		mode: import
 		source =
 				let
-				    Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-				    #"C:\Users\Dimlu\app-b3\exports\bi\_f_fundamento csv" = Fonte{[#"Folder Path"="C:\Users\Dimlu\app-b3\exports\bi\",Name="f_fundamento.csv"]}[Content],
-				    #"CSV Importado" = Csv.Document(#"C:\Users\Dimlu\app-b3\exports\bi\_f_fundamento csv",[Delimiter=";", Columns=15, Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(#"CSV Importado", [PromoteAllScalars=true]),
-				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"ticker", type text}, {"data", type date}, {"data_hora_iso", type datetime}, {"pl", type number}, {"pvp", type number}, {"roe", type number}, {"roa", type number}, {"roic", type number}, {"margem_liquida", type number}, {"margem_bruta", type number}, {"margem_ebitda", type number}, {"divida_patrimonio", type number}, {"cagr_receita_5a", type number}, {"cagr_lucro_5a", type number}, {"mais_recente", type logical}})
+				    Origem = fnLerBI("f_fundamento.csv"),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(Origem,{{"ticker", type text}, {"data", type date}, {"data_hora_iso", type datetime}, {"pl", type number}, {"pvp", type number}, {"roe", type number}, {"roa", type number}, {"roic", type number}, {"margem_liquida", type number}, {"margem_bruta", type number}, {"margem_ebitda", type number}, {"divida_patrimonio", type number}, {"cagr_receita_5a", type number}, {"cagr_lucro_5a", type number}, {"mais_recente", type logical}})
 				in
 				    #"Tipo Alterado"
 

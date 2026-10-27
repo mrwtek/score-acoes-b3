@@ -49,18 +49,13 @@ Power BI/
 
 **Pendências conhecidas**, em ordem de quanto atrapalham:
 
-1. **As 4 medidas de tese não funcionam.** `Retorno da tese %`,
-   `Tese vs IBOV (p.p.)`, `Tese vs CDI (p.p.)` e `Dias restantes` fazem
-   `AVERAGE`/`SUM` sobre colunas que a importação tipou como **texto**. Veja
-   §0.3.
-2. **O parâmetro `PastaBI` não controla nada.** As 9 consultas têm o caminho
-   escrito dentro do M, por `Folder.Files`. A `fnLerBI` e o parâmetro existem
-   no modelo e não são usados. Veja §0.3.
-3. **Falta a segmentação por período** na tela de benchmark; sem ela as
+1. **Falta a segmentação por período** na tela de benchmark; sem ela as
    medidas `base 100` nunca são reancoradas.
-4. **Os dois gráficos de rosca da Carteira se sobrepõem** em 222 px, e o da
+2. **Os dois gráficos de rosca da Carteira se sobrepõem** em 222 px, e o da
    direita encosta na borda da página.
-5. A Ficha do ativo usa **slicer de ticker, não drill-through** (§3.4).
+3. A Ficha do ativo usa **slicer de ticker, não drill-through** (§3.4).
+4. O slicer da tela de benchmark está com **seleção salva em `ITUB4`** —
+   aquela página abre filtrada nesse papel.
 
 ### 0.1 Para abrir
 
@@ -69,41 +64,47 @@ mesma coisa em texto: dá para ver num diff do git o que mudou numa medida,
 coisa que o `.pbix` não permite por ser binário.
 
 O relatório aponta para o modelo por caminho relativo, então mover a pasta
-inteira não quebra nada. O caminho de `exports/bi` é que está preso a esta
-máquina — e em mais lugares do que deveria, como explica a seção seguinte.
+inteira não quebra nada. **O único valor preso a esta máquina é o parâmetro
+`PastaBI`**: em outra, mude-o em Transformar dados → Gerenciar Parâmetros.
 
-### 0.3 Duas coisas para arrumar no modelo
+### 0.3 Duas correções feitas no modelo em 26/10/2026
 
-Descobertas em 26/10/2026 lendo o TMDL, e nenhuma delas aparece como erro na
-tela.
+Ficam registradas porque nenhuma das duas aparecia como erro na tela, e a
+segunda pode voltar sozinha.
 
-**As colunas de conferência de `f_tese` estão tipadas como texto.** O
-`Table.TransformColumnTypes` da consulta fixou `type text` em `retorno`,
-`ibov`, `cdi`, `vs_ibov`, `vs_cdi`, `dias_corridos`, `dias_restantes`,
-`preco_atual`, `medido_ate`, `vencimento` e `vencida`. A detecção automática
-acertou dentro do que sabia: as duas teses foram abertas no mesmo dia, ainda
-sem pregão para medir, então essas colunas chegaram **vazias** e o Power BI
-não tinha como adivinhar que são números.
+**As 9 consultas passaram a ler pela `fnLerBI`.** Elas tinham sido criadas
+pelo conector de Pasta, e cada uma carregava o caminho absoluto dentro do
+próprio M (`Folder.Files("C:\...\exports\bi")`), de modo que o parâmetro
+`PastaBI` e a função `fnLerBI` existiam sem serem usados por ninguém — numa
+máquina nova seriam 9 consultas para editar em vez de um parâmetro. Hoje cada
+consulta começa com `Origem = fnLerBI("<arquivo>.csv")` e o resto segue igual.
 
-A consequência é que as 4 medidas que dependem delas não vão funcionar nem
-quando o dado chegar — o tipo já está gravado no modelo, e reimportar não
-re-detecta coluna existente. A correção é editar a consulta `f_tese` em
-Transformar dados e trocar o tipo dessas colunas para Número Decimal (e
-`vencimento` e `medido_ate` para Data). Vale esperar a primeira tese com
-medição, para conferir que o número entra certo.
+Isso trouxe um ganho que não era o objetivo: as consultas antigas usavam
+`QuoteStyle.None`, e a `fnLerBI` usa `QuoteStyle.Csv`. Com `None`, as aspas
+que o pandas põe em volta de um campo que contém vírgula entram no texto — e
+a premissa das teses tem vírgula. Depois da troca elas somem.
 
-**O parâmetro `PastaBI` e a função `fnLerBI` não são usados por ninguém.** As
-9 consultas foram criadas pelo conector de Pasta, e cada uma carrega o
-caminho absoluto dentro do próprio M:
+**As colunas de conferência de `f_tese` deixaram de ser texto.** A detecção
+automática tinha fixado `type text` em `retorno`, `ibov`, `cdi`, `vs_ibov`,
+`vs_cdi`, `dias_corridos`, `dias_restantes`, `preco_atual`, `medido_ate`,
+`vencimento`, `vencida` e `data_encerramento`. Ela acertou dentro do que
+sabia: as duas teses foram abertas no mesmo dia, ainda sem pregão para medir,
+então essas colunas chegaram **vazias** e não havia como adivinhar que são
+números. As 4 medidas de tese fazem `AVERAGE`/`SUM` sobre elas e não
+funcionavam — e não voltariam a funcionar sozinhas, porque reimportar não
+re-detecta tipo de coluna existente.
 
-```m
-Fonte = Folder.Files("C:\Users\Dimlu\app-b3\exports\bi"),
-```
+Agora são `type number`, `Int64.Type`, `type date` e `type logical`, no M e no
+`dataType` da coluna.
 
-Funciona igual nesta máquina. O preço aparece em outra: em vez de mudar um
-parâmetro, seriam 9 consultas para editar. Para ligar tudo ao parâmetro,
-troque o passo `Fonte` de cada consulta por `fnLerBI("<arquivo>.csv")` — é a
-mesma leitura, e foi para isso que os dois foram criados.
+**Isso pode acontecer de novo.** Toda vez que uma coluna nova do
+`exportar_bi.py` chegar inteiramente vazia e você usar "Detectar Tipo de
+Dados", ela nasce texto e fica assim. Ao acrescentar coluna ao exportador,
+confira o tipo na consulta antes de construir medida em cima.
+
+**Falta conferir com dado real:** nenhuma das duas teses tem medição ainda, e
+é só quando a primeira tiver que dá para ver os valores entrando nas colunas
+já tipadas — em especial `vencida`, que vem do pandas como `True`/`False`.
 
 ### 0.2 O que vai para o git, e o que não vai
 
@@ -681,20 +682,18 @@ Duas diferenças em relação ao que esta seção pedia:
 
 ### 3.5 Diário de teses — FEITA
 
-Cabeçalho, filtro de `status`, cartão com `Teses abertas` e a tabela de
-`f_tese`: ticker, data de abertura, preço e score de abertura, horizonte,
-status, vencimento, dias restantes, retorno, `vs_ibov`, `vs_cdi`, premissa e
-critério.
+Cabeçalho, filtro de `status`, cartões e a tabela de `f_tese`: ticker, data
+de abertura, preço e score de abertura, horizonte, status, vencimento, dias
+restantes, retorno, `vs_ibov`, `vs_cdi`, premissa e critério.
 
-**As colunas de conferência entram como coluna, não pelas medidas.** As
-quatro medidas de tese fazem `AVERAGE`/`SUM` sobre colunas tipadas como texto
-e não funcionam — §0.3 explica por quê e como corrigir. Lidas como coluna, as
-mesmas informações aparecem corretamente; ficam vazias enquanto não houver
-pregão novo desde a abertura, e vazio aqui quer dizer "ainda não dá para
-medir", não zero.
+Os cartões trazem `Teses abertas`, `Retorno da tese %`,
+`Tese vs IBOV (p.p.)`, `Tese vs CDI (p.p.)` e `Dias restantes` — as quatro
+últimas só passaram a funcionar com a correção de tipo da §0.3.
 
-Quando o tipo for corrigido, troque as colunas `retorno`, `vs_ibov`,
-`vs_cdi` e `dias_restantes` pelas medidas equivalentes, que já existem.
+**A tabela continua lendo as colunas, não as medidas**, de propósito: coluna
+funciona com qualquer tipo, e numa tabela com uma linha por tese o valor é o
+mesmo. Ficam vazias enquanto não houver pregão novo desde a abertura, e vazio
+aqui quer dizer "ainda não dá para medir", não zero.
 
 ### 3.6 Saúde dos dados — FEITA
 
