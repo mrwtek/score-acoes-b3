@@ -1,0 +1,95 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "df5c68d466a244a4b7c6",
+  "position": {
+    "x": 76,
+    "y": 310,
+    "z": 2,
+    "height": 300,
+    "width": 1768,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "meta_exportacao"
+                    }
+                  },
+                  "Property": "arquivo"
+                }
+              },
+              "queryRef": "meta_exportacao.arquivo",
+              "nativeQueryRef": "arquivo",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "meta_exportacao"
+                        }
+                      },
+                      "Property": "linhas"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(meta_exportacao.linhas)",
+              "nativeQueryRef": "Linhas"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "meta_exportacao"
+                  }
+                },
+                "Property": "arquivo"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

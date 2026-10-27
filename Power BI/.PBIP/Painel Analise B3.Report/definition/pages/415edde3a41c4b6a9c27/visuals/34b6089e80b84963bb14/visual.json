@@ -1,0 +1,80 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "34b6089e80b84963bb14",
+  "position": {
+    "x": 76,
+    "y": 130,
+    "z": 1,
+    "height": 160,
+    "width": 1768,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Exportado em"
+                }
+              },
+              "queryRef": "_Medidas.Exportado em",
+              "nativeQueryRef": "Exportado em"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Última cotação"
+                }
+              },
+              "queryRef": "_Medidas.Última cotação",
+              "nativeQueryRef": "Última cotação"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Dias desde a última cotação"
+                }
+              },
+              "queryRef": "_Medidas.Dias desde a última cotação",
+              "nativeQueryRef": "Dias desde a última cotação"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Ativos sem score"
+                }
+              },
+              "queryRef": "_Medidas.Ativos sem score",
+              "nativeQueryRef": "Ativos sem score"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "2cf15ec23fff427288e4",
+  "position": {
+    "x": 76,
+    "y": 630,
+    "z": 3,
+    "height": 390,
+    "width": 1768,
+    "tabOrder": 3
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "meta_exportacao"
+                    }
+                  },
+                  "Property": "arquivo"
+                }
+              },
+              "queryRef": "meta_exportacao.arquivo",
+              "nativeQueryRef": "arquivo"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "meta_exportacao"
+                        }
+                      },
+                      "Property": "linhas"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(meta_exportacao.linhas)",
+              "nativeQueryRef": "Linhas"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "meta_exportacao"
+                    }
+                  },
+                  "Property": "data_min"
+                }
+              },
+              "queryRef": "meta_exportacao.data_min",
+              "nativeQueryRef": "data_min"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "meta_exportacao"
+                    }
+                  },
+                  "Property": "data_max"
+                }
+              },
+              "queryRef": "meta_exportacao.data_max",
+              "nativeQueryRef": "data_max"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "meta_exportacao"
+                  }
+                },
+                "Property": "arquivo"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -44,11 +44,12 @@ Power BI/
 - Os 11 relacionamentos, e — importante — **nenhum** dos três que a seção 1.7
   manda não criar.
 - As 32 medidas, com formatação aplicada (percentual, data, inteiro).
-- 3 das 6 telas: **Carteira**, **Desempenho contra benchmark** e **Ranking**.
+- 4 das 6 telas: **Carteira**, **Desempenho contra benchmark**, **Ranking**
+  e **Saúde dos dados**.
 
-**O que falta**: as telas 3.4 (Ficha do ativo), 3.5 (Diário de teses) e 3.6
-(Saúde dos dados). Na tela de benchmark falta a segmentação por período —
-hoje só existe a de ticker.
+**O que falta**: as telas 3.4 (Ficha do ativo) e 3.5 (Diário de teses). Na
+tela de benchmark falta a segmentação por período — hoje só existe a de
+ticker.
 
 ### 0.1 Para abrir
 
@@ -627,12 +628,24 @@ Tabela de `f_tese`: ticker, data de abertura, premissa, critério,
 `Tese vs CDI (p.p.)`, status.
 Filtro por `status`. Cartão com `Teses abertas`.
 
-### 3.6 Saúde dos dados — A FAZER
+### 3.6 Saúde dos dados — FEITA
 
-Tabela de `meta_exportacao` inteira — é o que ela existe para ser.
-Cartões: `Exportado em`, `Última cotação`, `Dias desde a última cotação`,
-`Ativos sem score`.
-Barras de contagem de linhas por arquivo.
+Quatro faixas, de cima para baixo: cabeçalho explicando de onde vem o dado;
+cartões com `Exportado em`, `Última cotação`, `Dias desde a última cotação` e
+`Ativos sem score`; barras de linhas por arquivo; tabela do
+`meta_exportacao`.
+
+Duas escolhas que divergem do que esta seção pedia antes, e por quê:
+
+- **As barras são ordenadas por nome de arquivo, não por tamanho.** Ordem
+  alfabética dá posição estável entre execuções, e é isso que faz uma tabela
+  encolher virar coisa visível. Ordenado por tamanho, a barra que diminuiu
+  muda de lugar e o olho não percebe.
+- **A tabela traz só `arquivo`, `linhas`, `data_min` e `data_max`.** As
+  outras quatro colunas do `meta_exportacao` — `janela_inicio`, `janela_fim`,
+  `tickers_sem_score` e `exportado_em` — são iguais nas oito linhas, porque
+  descrevem a exportação e não cada arquivo. Repetidas na tabela seriam oito
+  cópias do mesmo valor; estão nos cartões, onde aparecem uma vez.
 
 Essa tela parece burocrática e é a que evita ler número errado com cara de
 certo. Se `Dias desde a última cotação` estiver em 14, nenhum outro visual do
