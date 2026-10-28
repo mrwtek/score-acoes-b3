@@ -50,11 +50,14 @@ trade-off antes de decidir por mim.
                               fórmula
       indices.py              benchmarks: IBOV (brapi) e Selic/CDI (BCB), mais
                               as contas de rendimento; `python indices.py`
-                              imprime a comparação ação × IBOV × CDI
+                              imprime a comparação ação × IBOV × CDI.
+                              `selic_anual_vigente()` é a régua do P1-14
       exportar_bi.py          camada de BI: lê o banco e grava CSVs em
                               `exports/bi/` para o Power BI. Só lê. `f_score`
                               é append — é ele que dá série ao score, que não
-                              existe no banco
+                              existe no banco. `f_referencia` também é append:
+                              uma linha por dia com a régua macro daquele
+                              snapshot (Selic do prêmio, inflação do deflator)
       backfill_historico.py   backfill de preços diários da brapi; NÃO é de uso
                               único — roda uma vez por mês para estender a série
       backfill_indices.py     idem, para IBOV, Selic e CDI
@@ -233,7 +236,19 @@ Peso das cinco categorias: 20% cada — número meu, não do PRD, ver DECISOES.m
   7,05% move o score em no máximo 4,3 pontos). Só os CAGR são deflacionados;
   ROE, margens e dívida/PL são razões do mesmo período e a inflação se cancela.
 
-Desse bloco falta só o **P1-14** (flag `premio_negativo`). Confira no `ESTADO.md` antes de assumir
+- **`premio_negativo` é flag, não nota** (P1-14). Compara o earnings yield
+  contra a Selic: abaixo dela, a ação paga menos que título público com risco
+  muito maior. Não entra em peso, categoria, ordenação nem cobertura — o
+  z-score do valuation só sabe dizer quem é o menos caro *do grupo*, e esta
+  flag é a pergunta absoluta que falta. **A régua é a Selic viva** do banco
+  (série 11 do SGS, anualizada em 252 pregões, `indices.selic_anual_vigente()`),
+  com fallback para `faixas.SELIC_REFERENCIA`. Cada exportação grava a régua
+  do dia em `exports/bi/f_referencia.csv` — sem isso, uma flag que vira no
+  tempo não deixa separar "a ação ficou cara" de "a Selic subiu".
+  **Cuidado com a unidade:** `earnings_yield` é fração (0,1961) e a Selic vem
+  em ponto percentual (13,65).
+
+O bloco de score está fechado. Confira no `ESTADO.md` antes de assumir
 qualquer coisa.
 
 ## Regras de trabalho

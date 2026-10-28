@@ -204,6 +204,52 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       falha se um dia ela começar a morder (sinal de que o comentário
       envelheceu).
 
+- [x] **P1-14** flag `premio_negativo` (7A.7). O valuation é relativo, então
+      ele só sabe dizer quem é o menos caro **do grupo** — se o grupo inteiro
+      estiver caro, continua distribuindo notas de 5 a 95 como se houvesse
+      barganha. O prêmio sobre a Selic é o teste absoluto que faltava.
+
+      **O resultado que justifica a tarefa:** 7 dos 10 tickers pagam menos
+      que título público. O caso mais claro é a **BBAS3 com valuation 78,3**
+      — o segundo mais "barato" do grupo pelo z-score — **e prêmio de
+      −1,33 pp**. As duas afirmações são verdadeiras ao mesmo tempo, e só a
+      segunda é sobre o mundo.
+
+          PETR4  +6,0    WEGE3  -10,4 !   FIQE3  -2,5 !   BBDC4  +1,2
+          ITUB4  -3,1 !  ISAE4   +2,0     BBSE3  -2,6 !   BBAS3  -1,3 !
+          ITSA4  -1,5 !  VALE3   -9,9 !
+
+      **É flag, não nota.** Não entra em peso, categoria, ordenação nem
+      cobertura — `teste_09` calcula o ranking com Selic de 2% e de 40% e
+      exige score idêntico nos dois. Misturar no score recriaria o
+      `score_geral` que o P1-13 removeu.
+
+      **A régua é a Selic viva**, não a constante de `faixas.py`: série 11 do
+      SGS lida do banco e anualizada em 252 pregões, em
+      `indices.selic_anual_vigente()`. Escolha sua, e o porquê de ela não
+      contradizer o deflator fixo está no DECISOES.md de 28/10.
+      Medido: a Selic viva deu **13,649989%** contra **13,65** da constante —
+      as duas réguas coincidem hoje, então a troca não cria degrau na série.
+
+      **`f_referencia.csv` é o preço dessa escolha**, e é arquivo novo: uma
+      linha por dia, append idempotente, com a Selic usada, a taxa diária
+      crua, a data do ponto, a defasagem e a fonte, mais a
+      `inflacao_referencia`. Sem ele, uma flag que vira no tempo não deixa
+      separar "a ação ficou cara" de "a Selic subiu". Só é gravado junto com
+      um snapshot de score — linha de régua em dia sem nota ficaria pendurada.
+
+      **Armadilha que o teste trava primeiro:** `earnings_yield` é fração
+      (0,1961) e a Selic vem em ponto percentual (13,65). Comparar cru marca
+      10 de 10 como prêmio negativo, inclusive a PETR4, que paga 6 pontos
+      ACIMA — e a tela fica plausível, porque erro de escala não parece erro,
+      parece mercado caro. `test_premio.py`, 15 testes.
+
+      **Pendência, e é sua:** o `f_score.csv` ganhou duas colunas e o
+      `f_referencia.csv` nasceu. **O Power BI não enxerga coluna nova
+      sozinha** — o `.PBIP` não foi tocado. O DECISOES.md de 26/10 já avisava
+      que coluna nova pede conferência de tipo na consulta antes de virar
+      medida.
+
 ### Limpeza de 26/10/2026 (ao retomar o projeto)
 Três coisas estavam fora do lugar depois de ~7 semanas parado:
 - `ESTADO.md` no disco tinha regredido para a versão de 02/09; restaurado da
@@ -247,6 +293,17 @@ funcionam, então **o programa parece vivo sem estar coletando nada**.
 **Dano conferido no banco:** 0 cotações e 0 fundamentos em 28/10. A última
 coleta registrada é de **14/09/2026** — sete semanas sem série nova.
 
+> **Correção de 28/10, 14:12.** O parágrafo acima era verdade quando foi
+> escrito, e deixou de ser. O banco tem 13 cotações e 10 fundamentos
+> carimbados **28/10 13:52:24**, seis minutos depois do crash das 13:46 —
+> alguém subiu de novo e forçou um `checknow`. Então o ranking de hoje roda
+> sobre fundamento de hoje, não de 14/09.
+> **O diagnóstico do P2-1 continua de pé**: uma coleta manual ter dado certo
+> não conserta a thread que morre na próxima falha de rede. O que mudou é só
+> o tamanho do buraco na série, não a causa.
+> A série de preços diários (`cotacoes_historicas`) continua parando em
+> **26/10**, porque quem a estende é o `backfill_historico.py`, não a thread.
+
 **Não veio das mudanças de score.** Os commits e95715a e 7f1c735 tocaram
 `faixas.py`, `scoring.py`, testes e docs. Nenhum toca `coletor.py` ou
 `main.py`.
@@ -285,7 +342,9 @@ Todo o bloco de score vem **antes** do P1-4, para não gravar snapshots numa
 escala que será trocada.
 
 ### Bloco de score (o miolo da revisão)
-- [ ] **P1-14** flag `premio_negativo` quando earnings yield < Selic
+**Fechado em 28/10/2026.** P1-11, P1-12, P1-13, P1-2 e P1-14 estão todos
+implementados. A escala não muda mais por baixo dos snapshots, então o P1-4 e
+o VERSAO-SCORE já podem ser feitos sem gravar nota em régua condenada.
 
 ### Universo
 - [ ] **P1-8** ampliar whitelist para 20–30 tickers

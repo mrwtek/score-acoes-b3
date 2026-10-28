@@ -11,11 +11,11 @@ tabela de tres linhas na mao, sem banco temporario e sem depender de quais
 tickers estao na whitelist hoje.
 
 ATENCAO antes de mexer: a metodologia vigente esta na secao 7A do PRD e no
-DECISOES.md. O que esta implementado aqui ainda e a versao antiga - min-max
-relativo ao universo em todas as categorias, margens dentro de rentabilidade,
-margem_bruta pontuando e score_geral existindo. Tudo isso ja foi decidido
-contra; a migracao e o bloco P1-11 -> P1-12 -> P1-13 -> P1-2 -> P1-14.
-O P1-1 so moveu o codigo de lugar, sem mudar uma conta.
+DECISOES.md. O bloco de migracao
+P1-11 -> P1-12 -> P1-13 -> P1-2 -> P1-14 esta TODO implementado aqui: faixas
+absolutas fora do valuation, margens como categoria propria, margem_bruta fora
+do score, score_geral removido, winsorizacao + z-score + CDF no relativo e a
+flag de premio sobre a Selic.
 """
 
 import math
@@ -107,6 +107,25 @@ METRICAS_VALUATION = (
 
 # Colunas cruas e derivadas que o ranking mostra para conferencia manual.
 COLUNAS_VALUATION_EXIBICAO = ["pl", "pvp", "earnings_yield", "book_to_market"]
+
+# P1-14: o teste absoluto que falta no valuation (7A.7).
+#
+# O z-score do valuation so diz quem e o menos caro DO GRUPO. Se o grupo
+# inteiro estiver caro, ele continua distribuindo notas de 5 a 95 como se
+# houvesse barganha ali. O premio sobre a Selic e a pergunta que ele nao faz:
+# esta acao paga mais que titulo publico, que tem risco muito menor?
+#
+# NAO VIRA NOTA, vira flag. Entra depois do score estar calculado e nao mexe
+# em peso, categoria nem ordenacao -- de proposito, porque "caro em termos
+# absolutos" ja e informacao suficiente sozinha e misturar isso na nota
+# recriaria o score_geral que o P1-13 acabou de remover.
+#
+# ARMADILHA DE UNIDADE: earnings_yield e FRACAO (0,1961) e a Selic vem em
+# PONTO PERCENTUAL (13,65). Comparar os dois crus marcaria 7 dos 10 tickers
+# de hoje como premio negativo por erro de escala, inclusive a PETR4, que
+# paga quase 6 pontos ACIMA da Selic. Por isso a conversao e explicita aqui e
+# e o primeiro teste do test_premio.py.
+PONTOS_PERCENTUAIS = 100.0
 
 # PESO_FUNDAMENTALISTA e PESO_PRECO sairam junto com o score_geral (P1-13).
 # Os dois scores agora sao lidos lado a lado, nunca somados.
@@ -262,7 +281,27 @@ def _media_ponderada(df, pesos_por_coluna):
     return (notas * pesos).sum(axis=1) / soma.replace(0, np.nan)
 
 
-def calcular_score_fundamentalista(fundamentos):
+def calcular_premio_selic(earnings_yield, selic_anual):
+    """Premio da acao sobre o titulo publico, em pontos percentuais (7A.7).
+
+    `earnings_yield` chega como FRACAO (1/pl) e `selic_anual` em PONTO
+    PERCENTUAL ao ano -- a conversao e o unico lugar onde isso pode dar
+    errado, entao esta explicita numa linha so.
+
+    Subtracao simples, nao composicao, e aqui isso esta certo: sao duas taxas
+    nominais do mesmo periodo lidas lado a lado, e a diferenca em pontos
+    percentuais e exatamente como o mercado le premio de risco. E o caso
+    OPOSTO ao do CAGR em faixas.deflacionar(), onde a composicao importava
+    porque uma taxa estava dentro da outra.
+
+    Yield ausente devolve ausente -- nao da para saber, e isso nao e o mesmo
+    que premio zero nem que premio negativo.
+    """
+    yield_anual = pd.to_numeric(earnings_yield, errors="coerce") * PONTOS_PERCENTUAIS
+    return yield_anual - selic_anual
+
+
+def calcular_score_fundamentalista(fundamentos, selic_anual=None):
     """`fundamentos`: um registro por ticker, indexado por ticker.
 
     Quatro categorias usam FAIXA ABSOLUTA (faixas.py): a nota sai do valor do
@@ -274,7 +313,15 @@ def calcular_score_fundamentalista(fundamentos):
     indicador disponivel sai como ausente e tem o peso redistribuido entre as
     que sobraram -- nao vira zero, que seria dizer "ruim" quando a verdade e
     "nao da para saber".
+
+    `selic_anual` e a regua do premio do P1-14, em % ao ano. Quando nao vem,
+    usa a constante de faixas.py -- o default existe para teste com dado
+    sintetico e para quem chamar daqui sem ter banco. Em producao quem passa
+    e o analise.py, com a Selic viva de indices.selic_anual_vigente().
     """
+    if selic_anual is None:
+        selic_anual = faixas.SELIC_REFERENCIA
+
     df = adicionar_metricas_valuation(fundamentos)
     aplicaveis = _contar_aplicaveis(df)
     df = _mascarar_nao_aplicaveis(df)
@@ -323,6 +370,15 @@ def calcular_score_fundamentalista(fundamentos):
 
     for coluna in COLUNAS_VALUATION_EXIBICAO:
         scores_categoria[coluna] = df[coluna]
+
+    # P1-14. Depois do score estar pronto, e sem entrar nele.
+    premio = calcular_premio_selic(df["earnings_yield"], selic_anual)
+    scores_categoria["premio_selic_pp"] = premio
+    # dtype anulavel de proposito: yield ausente vira <NA>, nao False. Dizer
+    # "nao tem premio negativo" sobre quem nao tem P/L seria inventar.
+    scores_categoria["premio_negativo"] = (premio < 0).astype("boolean").where(
+        premio.notna()
+    )
 
     return scores_categoria.sort_values("score_fundamentalista", ascending=False)
 
@@ -398,7 +454,7 @@ def calcular_score_reversao(precos):
     return pd.DataFrame.from_dict(linhas, orient="index")[colunas]
 
 
-def calcular_ranking(fundamentos, precos):
+def calcular_ranking(fundamentos, precos, selic_anual=None):
     """Junta score fundamentalista e score de reversao, lado a lado.
 
     NAO existe mais score_geral (P1-13). Ele era
@@ -413,8 +469,11 @@ def calcular_ranking(fundamentos, precos):
 
     Ordena por score_fundamentalista. O score de reversao fica ao lado, para
     ser lido junto e nao somado -- um diz "empresa boa", o outro diz "caiu".
+
+    `selic_anual` so atravessa daqui para o score fundamentalista, onde vira a
+    regua da flag `premio_negativo` (P1-14). Nao toca em nota nenhuma.
     """
-    fundamentalista = calcular_score_fundamentalista(fundamentos)
+    fundamentalista = calcular_score_fundamentalista(fundamentos, selic_anual)
     reversao = calcular_score_reversao(precos)
 
     combinado = fundamentalista.join(reversao, how="left")

@@ -12,10 +12,22 @@ import sqlite3
 
 import pandas as pd
 
+import faixas
 import scoring
 import setores
 import validacao
 from paths import CAMINHO_BANCO
+
+# Regua de ultimo recurso do premio (P1-14), quando nem da para carregar o
+# indices.py. Mesmo formato que indices.selic_anual_vigente() devolve, para
+# quem consome nao precisar saber de qual dos dois caminhos veio.
+SELIC_DE_EMERGENCIA = {
+    "selic_anual": faixas.SELIC_REFERENCIA,
+    "selic_taxa_diaria": None,
+    "selic_data": None,
+    "defasagem_dias": None,
+    "fonte": "faixas.SELIC_REFERENCIA (indices.py indisponivel)",
+}
 
 
 def carregar_fundamentos():
@@ -100,10 +112,42 @@ def fundamentos_validados():
     return validacao.validar_dataframe(df)
 
 
-def ranking_atual():
-    """Carrega, valida e devolve o ranking completo."""
+def selic_para_premio():
+    """A regua da flag `premio_negativo` (P1-14): Selic viva, com fallback.
+
+    O `import indices` fica AQUI DENTRO, e nao no topo do arquivo, de
+    proposito: indices.py importa coletor.py, que importa config.py, que
+    levanta na hora se faltar token de API. No topo, isso faria o ranking
+    inteiro -- que so le o banco e nao chama API nenhuma -- parar de rodar
+    durante uma troca de token, que e exatamente a pendencia de seguranca
+    aberta no ESTADO.md. O ranking nao depende de rede, e esta funcao e o que
+    mantem isso verdade.
+    """
+    try:
+        import indices
+    except Exception as erro:
+        print(f"AVISO: nao consegui carregar indices.py "
+              f"({erro.__class__.__name__}: {erro}).")
+        print(f"       Premio calculado contra a Selic fixa de "
+              f"{faixas.SELIC_REFERENCIA}% a.a.")
+        return SELIC_DE_EMERGENCIA
+
+    return indices.selic_anual_vigente()
+
+
+def ranking_atual(selic=None):
+    """Carrega, valida e devolve o ranking completo.
+
+    `selic` e o dicionario de selic_para_premio(). Entra por parametro para
+    quem exporta poder gravar a MESMA regua que o ranking usou -- ler duas
+    vezes daria o mesmo numero hoje, mas o ponto do f_referencia.csv e que o
+    par (score, regua) seja o mesmo par.
+    """
     fundamentos, _ = fundamentos_validados()
-    return scoring.calcular_ranking(fundamentos, carregar_precos_para_score())
+    if selic is None:
+        selic = selic_para_premio()
+    return scoring.calcular_ranking(fundamentos, carregar_precos_para_score(),
+                                    selic["selic_anual"])
 
 
 if __name__ == "__main__":
@@ -124,8 +168,17 @@ if __name__ == "__main__":
         print(f"\nSem setor no mapa (pontuam tudo): {', '.join(sem_setor)}")
         print("Acrescente em src/setores.py para as regras de setor valerem.")
 
+    selic = selic_para_premio()
+    print(f"\nRegua do premio: Selic {selic['selic_anual']:.2f}% a.a.")
+    print(f"  fonte: {selic['fonte']}")
+    if selic["selic_data"]:
+        print(f"  taxa de {selic['selic_data']} "
+              f"({selic['selic_taxa_diaria']}% a.d.), "
+              f"{selic['defasagem_dias']} dia(s) atras")
+
     print("\nRanking fundamentalista:\n")
-    ranking = scoring.calcular_ranking(validados, carregar_precos_para_score())
+    ranking = scoring.calcular_ranking(validados, carregar_precos_para_score(),
+                                       selic["selic_anual"])
 
     # scores em 1 casa; yields em 4, senao 0,0823 apareceria como 0,1
     ranking_exibicao = ranking.round(1)
@@ -144,9 +197,19 @@ if __name__ == "__main__":
         for obs, insuf in zip(ranking["observacoes"].fillna(0),
                               ranking["dados_insuficientes"].fillna(True))
     ]
+    # premio em pontos percentuais sobre a Selic, com '!' em quem paga menos
+    # que titulo publico. Texto e nao numero porque a flag e o sinal andam
+    # juntos: ler '-3,1 !' e uma leitura so, ler duas colunas sao duas.
+    ranking_exibicao["premio"] = [
+        "sem P/L" if premio != premio
+        else f"{premio:+.1f}" + (" !" if negativo else "")
+        for premio, negativo in zip(ranking["premio_selic_pp"],
+                                    ranking["premio_negativo"].fillna(False))
+    ]
     ranking_exibicao = ranking_exibicao.drop(
         columns=["indicadores_usados", "indicadores_aplicaveis",
-                 "observacoes", "dados_insuficientes", "janela_completa"]
+                 "observacoes", "dados_insuficientes", "janela_completa",
+                 "premio_selic_pp", "premio_negativo"]
     )
     print(ranking_exibicao.to_string())
 
@@ -156,3 +219,6 @@ if __name__ == "__main__":
           f" '!' = abaixo do minimo de {scoring.MINIMO_OBSERVACOES}, nota neutra.")
     print("score_reversao mede QUEDA, nao barateamento -- aposta contraria deliberada.")
     print("Ele e o score_fundamentalista sao lidos lado a lado, nunca somados.")
+    print("premio = earnings yield menos a Selic, em pontos percentuais.")
+    print("'!' = paga MENOS que titulo publico, com risco muito maior. E flag,")
+    print("nao nota: nao entra no score nem na ordenacao.")

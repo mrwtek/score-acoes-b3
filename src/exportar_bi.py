@@ -19,11 +19,18 @@ testado, e nao espalhadas em formulas M e DAX dentro de um .pbix:
   porque taxa diaria se compoe e nao se soma;
 - `score_fundamentalista` e `score_reversao` saem lado a lado, nunca somados.
 
-O f_score.csv e o unico arquivo em modo APPEND, e isso e de proposito: o
-score nao e gravado no banco, so calculado na hora. Cada execucao acrescenta
-o snapshot do dia, e e isso que vai permitir um grafico de evolucao de score
-daqui a alguns meses. Rodar duas vezes no mesmo dia reescreve o dia, nao
-duplica.
+Dois arquivos saem em modo APPEND, e isso e de proposito:
+
+- f_score.csv, porque o score nao e gravado no banco, so calculado na hora.
+  Cada execucao acrescenta o snapshot do dia, e e isso que vai permitir um
+  grafico de evolucao de score daqui a alguns meses.
+- f_referencia.csv, uma linha por dia com a REGUA macro daquele snapshot
+  (P1-14). Desde que a Selic do premio passou a ser lida viva do banco, o
+  resultado sozinho nao basta: sem saber contra o que se comparou, nao da
+  para separar "a acao ficou cara" de "a Selic subiu".
+
+Os dois sao idempotentes por dia: rodar duas vezes na mesma tarde reescreve
+o dia, nao duplica.
 
 Rodar: cd src && python exportar_bi.py
 """
@@ -34,6 +41,7 @@ from datetime import datetime
 import pandas as pd
 
 import analise
+import faixas
 import setores
 import teses as modulo_teses
 from banco import TIPO_TAXA_DIARIA, hoje_b3, listar_teses
@@ -59,6 +67,20 @@ ENCODING = "utf-8-sig"
 
 ARQUIVO_SNAPSHOT = "f_score.csv"
 COLUNA_SNAPSHOT = "data_snapshot"
+
+# Segundo arquivo em modo APPEND (P1-14). Guarda a REGUA de cada dia, nao o
+# resultado: qual Selic o premio daquele snapshot comparou contra.
+#
+# Existe porque a regua virou viva. Com a Selic fixa de faixas.py, uma flag
+# `premio_negativo` que mudasse so podia querer dizer que a empresa ou o preco
+# mudaram. Com a Selic do BCB entrando todo dia, a mesma flag pode virar
+# sozinha porque o Copom mexeu -- e o grafico de flags ao longo do tempo
+# passa a misturar duas causas que ninguem consegue separar depois.
+# Gravando a regua ao lado do resultado, da para separar.
+#
+# E o mesmo raciocinio do VERSAO-SCORE, que trata da metodologia; este trata
+# das constantes macro que a metodologia usa.
+ARQUIVO_REFERENCIA = "f_referencia.csv"
 
 
 # --------------------------------------------------------------------------
@@ -327,7 +349,31 @@ def montar_f_tese(conferencia=True):
     return pd.DataFrame(linhas)
 
 
-def montar_f_score(data_snapshot=None):
+def montar_f_referencia(selic, data_snapshot=None):
+    """Uma linha por dia com a regua macro usada naquele snapshot (P1-14).
+
+    Uma linha, nao uma por ticker: a regua e a mesma para todo mundo no dia, e
+    repeti-la dez vezes so convidaria alguem a tirar media dela no Power BI.
+    Liga no f_score pela data_snapshot, que e a chave que os dois ja tem.
+
+    `inflacao_referencia` vem junto mesmo nao tendo a ver com o premio. Ela e a
+    outra constante macro que mexe em nota sem a empresa ter mudado -- e o
+    deflator do crescimento, e ja causou exatamente esse problema uma vez
+    (AFINAR-FAIXAS, 26/10/2026, quando um snapshot ficou gravado na regua
+    anterior). Se um dia ela virar dinamica tambem, a serie ja estara aqui.
+    """
+    return pd.DataFrame([{
+        COLUNA_SNAPSHOT: data_snapshot or hoje_b3(),
+        "selic_anual": selic["selic_anual"],
+        "selic_taxa_diaria": selic["selic_taxa_diaria"],
+        "selic_data": selic["selic_data"],
+        "selic_defasagem_dias": selic["defasagem_dias"],
+        "selic_fonte": selic["fonte"],
+        "inflacao_referencia": faixas.INFLACAO_REFERENCIA,
+    }])
+
+
+def montar_f_score(selic=None, data_snapshot=None):
     """O ranking de hoje, com a data em que foi calculado.
 
     O score nao mora no banco: `ranking_atual()` calcula na hora, sobre o
@@ -337,8 +383,13 @@ def montar_f_score(data_snapshot=None):
     Quem nao tem fundamento nao aparece -- o ranking parte dos fundamentos, e
     os tres FIIs da carteira nao tem. Ausente nao vira nota: ficam de fora da
     tabela e aparecem contados na meta_exportacao.
+
+    `selic` e a regua do premio (P1-14), o dicionario de
+    analise.selic_para_premio(). Entra por parametro, e nao e lida aqui
+    dentro, para o f_referencia.csv do mesmo dia gravar exatamente a regua que
+    este snapshot usou.
     """
-    ranking = analise.ranking_atual()
+    ranking = analise.ranking_atual(selic)
     if ranking.empty:
         return pd.DataFrame()
 
@@ -419,8 +470,10 @@ def exportar_tudo():
 
     f_tese = montar_f_tese()
 
+    selic = analise.selic_para_premio()
+
     try:
-        f_score = montar_f_score()
+        f_score = montar_f_score(selic)
     except Exception as erro:
         print(f"AVISO: nao consegui calcular o ranking. O f_score.csv fica "
               f"como estava, com os snapshots anteriores. Motivo: {erro}")
@@ -443,10 +496,19 @@ def exportar_tudo():
         escritos.append((nome, df, coluna_data))
 
     if not f_score.empty:
+        dia = f_score[COLUNA_SNAPSHOT].iloc[0]
         _, total = gravar_snapshot(f_score)
         print(f"{ARQUIVO_SNAPSHOT}: {len(f_score)} linhas do snapshot de "
-              f"{f_score[COLUNA_SNAPSHOT].iloc[0]}, {total} no acumulado.")
+              f"{dia}, {total} no acumulado.")
         escritos.append((ARQUIVO_SNAPSHOT, f_score, COLUNA_SNAPSHOT))
+
+        # a regua so e gravada junto com um snapshot, nunca sozinha: uma linha
+        # de referencia num dia sem score nao descreve nada e ficaria pendurada
+        f_referencia = montar_f_referencia(selic, dia)
+        _, total_ref = gravar_snapshot(f_referencia, ARQUIVO_REFERENCIA)
+        print(f"{ARQUIVO_REFERENCIA}: Selic {selic['selic_anual']:.2f}% a.a. "
+              f"({selic['fonte']}), {total_ref} dia(s) no acumulado.")
+        escritos.append((ARQUIVO_REFERENCIA, f_referencia, COLUNA_SNAPSHOT))
 
     meta = montar_meta(escritos, ", ".join(sem_score))
     gravar(meta, "meta_exportacao.csv")

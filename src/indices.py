@@ -24,7 +24,8 @@ from datetime import datetime
 import requests
 
 from coletor import TIMEOUT_SEGUNDOS, buscar_historico
-from banco import TIPO_PRECO, TIPO_TAXA_DIARIA, _data_do_ponto
+import faixas
+from banco import TIPO_PRECO, TIPO_TAXA_DIARIA, _data_do_ponto, hoje_b3
 from paths import CAMINHO_BANCO
 
 # Simbolo na brapi -> codigo que usamos no banco. `^BVSP` e detalhe da fonte;
@@ -47,6 +48,26 @@ TIPOS = {
     "SELIC": TIPO_TAXA_DIARIA,
     "CDI": TIPO_TAXA_DIARIA,
 }
+
+CODIGO_SELIC = "SELIC"
+
+# Pregoes num ano, para anualizar a taxa diaria do BCB. E a convencao da B3 e
+# a mesma JANELA_REVERSAO do scoring.py: ano de bolsa tem 252 dias uteis, nao
+# 365 corridos. Taxa diaria do SGS so existe em dia util.
+PREGOES_NO_ANO = 252
+
+# Faixa plausivel da Selic diaria, em % AO DIA. Serve para um ponto corrompido
+# nao virar regua: 0,0508% ao dia da 13,65% ao ano, e 1% ao dia daria 1.100%.
+# Mesma ideia do validacao.py -- o impossivel nao vira numero, vira ausente.
+# O limite de baixo e aberto porque taxa zero existe (Selic a 0 nao e o caso
+# brasileiro, mas zero no banco e quase sempre linha vazia convertida).
+SELIC_DIARIA_MAXIMA = 0.5
+
+# Procedencia da regua usada no premio do P1-14. Vai gravada no
+# f_referencia.csv todo dia, porque a flag `premio_negativo` so quer dizer
+# alguma coisa se voce souber contra o que ela comparou.
+FONTE_SELIC_BANCO = "indices/BCB serie 11, anualizada em 252 pregoes"
+FONTE_SELIC_FIXA = "faixas.SELIC_REFERENCIA (sem serie utilizavel no banco)"
 
 
 def buscar_ibov(intervalo=None):
@@ -137,6 +158,18 @@ def acumular_taxa_diaria(pontos):
     return (acumulado - 1) * 100
 
 
+def anualizar_taxa_diaria(taxa_diaria, pregoes=PREGOES_NO_ANO):
+    """% ao dia -> % ao ano, compondo. Nao e multiplicar por 252.
+
+    Mesma aritmetica do acumular_taxa_diaria(), so que projetada para a frente
+    em vez de acumulada para tras: 0,050788% ao dia da 13,65% ao ano compondo
+    e 12,80% multiplicando. Com a Selic de dois digitos, os 0,85 ponto de
+    diferenca decidem sozinhos se uma acao com earnings yield de 13% tem
+    premio positivo ou negativo.
+    """
+    return ((1 + taxa_diaria / 100) ** pregoes - 1) * 100
+
+
 def variacao_percentual(pontos):
     """Rendimento de uma serie de niveis (IBOV), em %, do primeiro ao ultimo."""
     if len(pontos) < 2:
@@ -161,6 +194,61 @@ def carregar_serie_indice(codigo, inicio=None, fim=None):
     return _consultar(
         "SELECT data, valor FROM indices WHERE codigo = ?", (codigo.upper(),), inicio, fim
     )
+
+
+def _dias_entre(data_inicial, data_final):
+    """Dias corridos entre duas datas ISO. Negativo se a ordem se inverter."""
+    inicial = datetime.strptime(data_inicial, "%Y-%m-%d")
+    final = datetime.strptime(data_final, "%Y-%m-%d")
+    return (final - inicial).days
+
+
+def selic_anual_vigente(hoje=None):
+    """A Selic anualizada mais recente do banco. E a regua do premio (P1-14).
+
+    Devolve um dicionario com a taxa E a procedencia dela, nao so o numero.
+    Isso e o ponto: desde que a regua passou a ser viva, a flag
+    `premio_negativo` mudou de natureza -- ela pode virar sozinha, sem a
+    empresa ter mudado, porque o Copom mexeu. Sem registrar contra o que se
+    comparou, um grafico de flags ao longo do tempo mistura as duas coisas e
+    nao da para separar depois. Quem grava isso dia a dia e o exportar_bi.py,
+    em f_referencia.csv. E o mesmo problema que o VERSAO-SCORE levanta para a
+    metodologia, aplicado a regua macro.
+
+    DEFASAGEM NAO E MOTIVO PARA RECUSAR. O BCB publica com dois ou tres dias
+    de atraso, e a coleta pode estar parada ha semanas, entao a taxa quase
+    nunca e de hoje. A Selic e taxa de politica: fica parada entre reunioes do
+    Copom -- os cinco ultimos pontos do banco em 28/10/2026 sao o mesmo
+    0,050788. Recusar por estar velha trocaria uma regua de tres dias atras
+    por uma constante de semanas atras, que e pior. A defasagem sai junto, em
+    dias, para quem le poder julgar.
+
+    Cai para faixas.SELIC_REFERENCIA quando nao ha serie no banco ou quando o
+    ponto e implausivel. Nunca devolve None: sem regua a flag nao existe, e
+    "nao sei" aqui apagaria a coluna inteira em vez de um valor.
+    """
+    pontos = carregar_serie_indice(CODIGO_SELIC)
+
+    if pontos:
+        data_ponto, taxa_diaria = pontos[-1]
+        if taxa_diaria is not None and 0 < taxa_diaria <= SELIC_DIARIA_MAXIMA:
+            return {
+                "selic_anual": anualizar_taxa_diaria(taxa_diaria),
+                "selic_taxa_diaria": taxa_diaria,
+                "selic_data": data_ponto,
+                "defasagem_dias": _dias_entre(data_ponto, hoje or hoje_b3()),
+                "fonte": FONTE_SELIC_BANCO,
+            }
+        print(f"AVISO: Selic diaria implausivel no banco ({taxa_diaria} % a.d. "
+              f"em {data_ponto}). Caindo para faixas.SELIC_REFERENCIA.")
+
+    return {
+        "selic_anual": faixas.SELIC_REFERENCIA,
+        "selic_taxa_diaria": None,
+        "selic_data": None,
+        "defasagem_dias": None,
+        "fonte": FONTE_SELIC_FIXA,
+    }
 
 
 def carregar_serie_ticker(ticker, inicio=None, fim=None):

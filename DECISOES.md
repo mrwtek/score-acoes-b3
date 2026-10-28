@@ -9,6 +9,77 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 28/10/2026 — P1-14: a régua do prêmio é a Selic viva, e ela é gravada todo dia
+
+**Decisão:** a flag `premio_negativo` compara o earnings yield contra a Selic
+lida do banco (série 11 do SGS, anualizada em 252 pregões), e não contra a
+constante `SELIC_REFERENCIA` de `faixas.py`. Em troca, toda exportação grava
+num arquivo próprio — `f_referencia.csv`, append, uma linha por dia — qual
+régua aquele snapshot usou.
+
+**A alternativa recusada** era a constante fixa, e o argumento a favor dela era
+forte: é exatamente o raciocínio do deflator de inflação (AFINAR-FAIXAS), onde
+régua viva faria a nota se mexer todo mês sem a empresa ter mudado.
+
+**Por que o caso é diferente.** O deflator entra numa NOTA, que é lida como
+série e comparada consigo mesma ao longo do tempo. A flag não é nota — é uma
+pergunta sobre o mundo de hoje: *esta ação paga mais que título público
+agora?* Se o Copom sobe a Selic, a resposta muda de verdade, e uma régua
+congelada daria a resposta errada com cara de certa. É o oposto do caso do
+CAGR: lá o movimento era artefato da régua, aqui o movimento é o fato.
+
+**O custo, e como foi pago.** Uma flag que muda sozinha mistura duas causas —
+a ação ficou cara, ou a Selic subiu — e um gráfico de flags ao longo do tempo
+não separa as duas depois. Por isso o `f_referencia.csv`: grava `selic_anual`,
+a taxa diária crua, a data do ponto, a defasagem em dias e a fonte, mais a
+`inflacao_referencia` do deflator. Sem isso a escolha seria irresponsável; com
+isso o par (resultado, régua) fica guardado. É o mesmo problema que o
+VERSAO-SCORE levanta para a metodologia, aplicado às constantes macro que a
+metodologia usa.
+
+**Defasagem não é motivo para recusar o ponto.** O BCB publica com dois ou três
+dias de atraso e a coleta pode estar parada. Recusar por estar velha trocaria
+uma régua de dois dias atrás por uma constante editada à mão semanas antes —
+estritamente pior. A Selic é taxa de política: fica parada entre reuniões do
+Copom, e os cinco últimos pontos do banco são o mesmo 0,050788. A defasagem
+sai junto, em dias, para quem lê julgar.
+
+**Medido:** a Selic viva de 26/10 deu **13,649989% a.a.** contra **13,65** da
+constante — 0,00001 ponto de diferença, nenhuma flag mudou. Era o resultado
+desejado: as duas réguas coincidem hoje, então dá para trocar sem que a série
+futura pareça ter tido um degrau na troca.
+
+**Anualização é composta:** `(1 + taxa_diária/100)^252 − 1`. Multiplicar por
+252 daria 12,80% contra 13,65% — 0,85 ponto, suficiente para inverter a flag
+de quem tem yield perto de 13%. Mesma aritmética do `acumular_taxa_diaria()`,
+projetada para frente em vez de acumulada para trás.
+
+**Fallback explícito:** sem série no banco, ou com taxa diária acima de 0,5% ao
+dia (que seria Selic de 1.100% ao ano, portanto erro de dado), cai para
+`faixas.SELIC_REFERENCIA` e grava isso em `selic_fonte`. Nunca devolve nulo —
+sem régua a flag não existe, e apagar a coluna inteira é pior que usar a
+constante.
+
+**O `import indices` ficou dentro de `selic_para_premio()`, não no topo do
+`analise.py`.** `indices.py` importa `coletor.py`, que importa `config.py`, que
+levanta na hora se faltar token. No topo, isso faria o ranking inteiro — que só
+lê o banco e não chama API nenhuma — parar de rodar durante uma troca de token,
+que é justamente a pendência de segurança aberta no ESTADO.md. Import dentro de
+função é feio; ranking que depende de token de API para ler o próprio banco é
+pior.
+
+**A flag não encosta no score.** Entra depois de o score estar calculado, não
+mexe em peso, categoria nem ordenação, e não conta na cobertura. Misturá-la na
+nota recriaria o `score_geral` que o P1-13 removeu. O `teste_09` trava isso:
+calcula o mesmo ranking com Selic de 2% e de 40% e exige score idêntico.
+
+**Pendência que isso cria:** `f_score.csv` ganhou `premio_selic_pp` e
+`premio_negativo`, e o `f_referencia.csv` é arquivo novo. O Power BI não
+enxerga coluna nova sozinha — a entrada logo abaixo, de 26/10, já avisava
+exatamente disso. O `.PBIP` não foi tocado.
+
+---
+
 ## 26/10/2026 — Campo vazio no CSV vira nulo, não string vazia
 
 **Decisão:** a `fnLerBI` do Power BI troca `""` por `null` em todas as colunas,

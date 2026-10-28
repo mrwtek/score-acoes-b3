@@ -260,7 +260,7 @@ exportador grava; sem ele os acentos das premissas das teses viram lixo.
 
 ### 1.4 Uma consulta por arquivo
 
-Para cada um dos nove arquivos: Nova Fonte → Consulta Nula → Editor Avançado,
+Para cada um dos dez arquivos: Nova Fonte → Consulta Nula → Editor Avançado,
 e cole uma linha, trocando o nome:
 
 ```m
@@ -273,7 +273,18 @@ Repita para:
 ```
 dim_ativo        f_preco_diario   f_indice      f_fundamento   f_posicao
 f_transacao      f_tese           f_score       meta_exportacao
+f_referencia
 ```
+
+`f_referencia` é o mais novo (P1-14) e o menor: **uma linha por dia**, com a
+Selic contra a qual o prêmio daquele snapshot foi medido, a taxa diária crua,
+a data do ponto do BCB, a defasagem em dias, a fonte e a
+`inflacao_referencia`. Liga no `f_score` por `data_snapshot`.
+
+Ele existe porque a régua do prêmio é viva: a Selic entra do banco, não de
+uma constante. Sem guardar a régua, uma flag `premio_negativo` que mudasse de
+um mês para o outro não deixaria separar "a ação ficou cara" de "o Copom
+subiu a Selic".
 
 Depois, em cada consulta: selecione todas as colunas → Transformar →
 **Detectar Tipo de Dados**.
@@ -621,6 +632,53 @@ ranking, ao lado do score. Uma nota de 75 com cobertura "3 de 10" e outra com
 "10 de 10" não são a mesma informação, e sem a coluna ao lado as duas se
 parecem.
 
+**Prêmio sobre a Selic (P1-14).** Mesma ideia das duas de cima: vai ao lado da
+nota de valuation, porque as duas dizem coisas diferentes e só juntas dizem a
+verdade. A BBAS3 tira 78,3 em valuation — segunda mais barata do grupo — e
+paga 1,33 ponto **abaixo** de título público. O z-score não tem como mostrar
+isso: ele só sabe comparar quem está na lista.
+
+```dax
+Prêmio sobre a Selic =
+VAR Ultimo = [Último snapshot]
+RETURN
+    CALCULATE ( AVERAGE ( f_score[premio_selic_pp] ), f_score[data_snapshot] = Ultimo )
+```
+
+```dax
+Prêmio =
+VAR Ultimo = [Último snapshot]
+VAR Premio = [Prêmio sobre a Selic]
+VAR Negativo =
+    CALCULATE ( SELECTEDVALUE ( f_score[premio_negativo] ), f_score[data_snapshot] = Ultimo )
+RETURN
+    IF (
+        ISBLANK ( Premio ),
+        "sem P/L",
+        FORMAT ( Premio, "+0.0;-0.0" ) & IF ( Negativo = TRUE (), " !", "" )
+    )
+```
+
+```dax
+Abaixo da Selic =
+VAR Ultimo = [Último snapshot]
+RETURN
+    CALCULATE (
+        COUNTROWS ( FILTER ( f_score, f_score[premio_negativo] = TRUE () ) ),
+        f_score[data_snapshot] = Ultimo
+    )
+```
+
+```dax
+Selic da régua =
+LASTNONBLANKVALUE ( f_referencia[data_snapshot], MAX ( f_referencia[selic_anual] ) )
+```
+
+`SELECTEDVALUE` em `premio_negativo` pelo mesmo motivo de
+`dados_insuficientes`: coluna lógica, medida de linha de tabela. `Selic da
+régua` é o cartão que diz contra o que a tela está comparando — sem ele,
+`Abaixo da Selic = 7` não é uma afirmação completa.
+
 ### 2.6 Teses
 
 O exportador já fez a conferência contra IBOV e CDI em Python, cortando as
@@ -854,6 +912,25 @@ as linhas porque nunca foi preenchida, não porque a corretagem foi zero. O
 
 **Atualizar o Power BI não atualiza os dados.** O botão lê os CSVs. Para ter
 dado novo, rode a coleta e depois o `exportar_bi.py`, nessa ordem.
+
+**As colunas do prêmio não existem nos snapshots antigos.** `premio_selic_pp`
+e `premio_negativo` nasceram em 28/10/2026 com o P1-14. As linhas de
+`f_score.csv` gravadas antes disso ficam **vazias** nas duas — o append alinha
+por coluna e preenche o que falta com nulo. Consequências:
+
+- a detecção automática de tipo vê metade da coluna vazia; confira que
+  `premio_negativo` ficou **Verdadeiro/Falso** e não Texto antes de montar
+  medida em cima. É exatamente o caso que o DECISOES.md de 26/10 descreve, e
+  que já custou caro uma vez com `f_tese`;
+- um gráfico de "quantos abaixo da Selic" começa em 28/10/2026, não antes.
+  Nulo não é zero, e `Abaixo da Selic` devolve branco nos dias antigos —
+  que é o certo: naqueles dias ninguém mediu isso.
+
+**Coluna nova no `exportar_bi.py` não aparece sozinha no painel.** O Power
+Query guarda a lista de colunas na consulta. Depois de acrescentar coluna ao
+CSV (ou um arquivo inteiro, como o `f_referencia`), é preciso abrir o editor,
+refazer o passo de tipo e, no caso de arquivo novo, criar a consulta do
+passo 1.4. O `.PBIP` **não** foi atualizado para o P1-14.
 
 **Mexeu no scoring? Reexporte antes de atualizar o painel.** O `f_score.csv`
 congela a nota do dia, e uma mudança de metodologia muda a régua sem mudar a

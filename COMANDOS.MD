@@ -171,8 +171,22 @@ conhecida, não bug).
 e o cálculo do score (dado ausente, cobertura, peso redistribuído).
 **Quando rodar:** depois de qualquer mudança em `validacao.py`, `setores.py`
 ou `scoring.py` — ou seja, em toda tarefa do bloco de score.
-**Comportamento esperado:** 15/15, 12/12 e 14/14, cada um terminando numa
+**Comportamento esperado:** 15/15, 12/12 e 39/39, cada um terminando numa
 tabela de conferência manual. Nenhum toca o banco nem a API.
+
+### `python test_premio.py`
+**O que faz:** cobre a flag `premio_negativo` (P1-14) e a régua viva da Selic.
+Três coisas, em ordem de quanto doeria errar: que a comparação respeita a
+unidade (`earnings_yield` é fração, a Selic é ponto percentual — comparar cru
+marca 10 de 10 como prêmio negativo e a tela fica plausível); que prêmio
+ausente fica ausente, nunca `False`; e que trocar a Selic não move o score
+nem a ordem do ranking.
+**Quando rodar:** depois de mexer em `scoring.py`, em `faixas.SELIC_REFERENCIA`
+ou em `indices.selic_anual_vigente()`.
+**Comportamento esperado:** `15/15 testes passaram`, mais duas tabelas — o
+prêmio por P/L com a flag ao lado, e o erro de anualizar taxa diária
+multiplicando por 252 em vez de compor. Não toca o banco: os testes da régua
+substituem a leitura da série por uma lista fixa.
 
 ### `python test_teses.py`
 **O que faz:** confere o diário de teses — registro com prazo obrigatório,
