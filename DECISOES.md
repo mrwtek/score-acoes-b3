@@ -9,6 +9,56 @@ do resultado — e vai ficar tentado a "consertar" o que já estava certo.
 
 ---
 
+## 28/10/2026 — P2-1: a thread de coleta engole exceção, de propósito
+
+**Decisão:** `rodar_ciclo_protegido()` captura `Exception` em volta do ciclo
+inteiro, imprime o traceback e devolve ao loop, que continua. Engolir exceção
+é quase sempre errado; aqui é a escolha certa, e pelo mesmo motivo que a torna
+perigosa — **o ciclo é repetido**. Perder um ciclo custa uma hora de série.
+Perder a thread custou sete semanas.
+
+**O modo de falha que isso ataca não é "o programa quebrou", é "o programa
+parece vivo".** A thread é `daemon=True` e o prompt `>>` segue respondendo a
+`help`, `whitelistshow`, `pause`. Nada na tela diz que a coleta morreu. Em
+28/10 o `SSLEOFError` das 13:46 derrubou a thread e o programa ficou assim até
+alguém conferir o banco.
+
+**Engolido e invisível não são a mesma coisa.** O traceback inteiro vai para a
+tela, e dois ciclos falhados seguidos trocam o tom da mensagem — duas horas de
+silêncio já não é azar de rede. `except Exception` não pega `KeyboardInterrupt`
+nem `SystemExit`, então Ctrl-C continua encerrando; o `teste_21` trava isso,
+para ninguém trocar por um `except:` pelado.
+
+**O retry distingue o que adianta repetir.** Rede e 5xx repetem; 400, 401, 403
+e 404 não. Repetir 401 três vezes não conserta token e ainda atrasa o ciclo —
+pior, esconde o diagnóstico: "token não fornecido" num ticker enquanto outros
+passam é limite de plano, e isso está escrito nas Restrições do ESTADO.md
+justamente porque já confundiu antes. O 429 é caso à parte: a brapi limita 20
+requisições **por minuto**, então o único retry que pode dar certo é esperar o
+minuto inteiro.
+
+**O timeout é a parte mais importante e a que não aparece.** Retry trata o
+crash, que pelo menos deixa rastro. Sem timeout o risco é pior: conexão
+pendurada trava a thread para sempre, sem erro, sem traceback, sem nada para
+investigar depois. 30s é folgado para duas APIs que respondem em menos de 1s —
+o número não está calibrado para performance, está para garantir que a thread
+sempre volta.
+
+**Token nunca entra em log, e a URL também não.** A brapi recebe o token na
+query string, e mensagem de exceção do `requests` costuma trazer a URL
+completa — foi exatamente assim que o token vazou. `esconder_tokens()` filtra
+tudo que é impresso, no coletor e no traceback da guarda, e a chamada é
+identificada no log por descrição ("cotação de PETR4"), nunca por URL. Não é
+capricho de log bonito: o terminal vira print de tela, o print vira anexo, e o
+anexo vira token público. **Isso não desfaz o vazamento de 28/10** — o token
+antigo continua precisando ser trocado.
+
+**Custo aceito:** com rede ruim, um ciclo pode levar ~2,5 min (13 tickers ×
+2 APIs × 3 tentativas). O ciclo roda de hora em hora, então cabe. Se a
+whitelist dobrar no P1-8, este número dobra e vale reconferir.
+
+---
+
 ## 28/10/2026 — P1-14: a régua do prêmio é a Selic viva, e ela é gravada todo dia
 
 **Decisão:** a flag `premio_negativo` compara o earnings yield contra a Selic

@@ -276,7 +276,10 @@ qualquer coisa.
 Não são bugs a corrigir de passagem — são itens do backlog. Cite se
 atrapalharem a tarefa atual, mas não conserte fora de hora.
 
-- Coleta roda 24h, inclusive fora do pregão, poluindo a série (P0-5).
+- **Feriado nacional em dia útil ainda dispara coleta** (~9 dias por ano). A
+  janela do P0-5 olha só dia da semana e hora, então o preço repetido do
+  último fechamento entra na série. Fechar isso pede calendário da B3.
+  (Antes aqui estava "coleta roda 24h", que o P0-5 já tinha resolvido.)
 - **A winsorização p5/p95 quase não morde com 10 tickers.** Não é defeito da
   implementação, é aritmética de percentil: com n pequeno, p95 cai *entre* o
   extremo e o vizinho dele, não dentro do grupo. Medido: um outlier de 900
@@ -292,4 +295,8 @@ atrapalharem a tarefa atual, mas não conserte fora de hora.
   estatístico (P1-8).
 - `pausado` e `encerrar` são globais compartilhadas entre threads sem
   sincronização (P2-4).
-- Chamadas às APIs sem timeout, retry ou checagem de status HTTP (P2-1).
+
+Fechadas: o **P2-1** (chamadas sem timeout, retry ou checagem de status) foi
+resolvido em 28/10/2026 — `coletor._buscar()` e `main.rodar_ciclo_protegido()`.
+Nada no coletor imprime sem passar por `esconder_tokens()`: a brapi recebe o
+token na query string e ele já vazou num traceback uma vez.

@@ -131,10 +131,20 @@ def teste_07_usa_fuso_de_brasilia():
 def teste_08_contrato_do_p0_5():
     assert (HORA_ABERTURA, HORA_FECHAMENTO) == (10, 18), "a janela pedida foi 10h-18h"
 
-    # o loop automatico consulta a janela; a coleta em si nao (quem decide QUANDO
-    # e o loop, nao o checar_agora)
+    # A coleta automatica consulta a janela; a coleta em si nao (quem decide
+    # QUANDO e o loop, nao o checar_agora).
+    #
+    # Desde o P2-1 a checagem mora em ciclo_de_coleta(), e nao mais no corpo do
+    # loop: o loop chama rodar_ciclo_protegido(), que embrulha o ciclo num
+    # try/except para erro inesperado nao matar a thread. O contrato do P0-5
+    # nao mudou, so desceu um nivel.
     fonte_loop = inspect.getsource(main.loop_automatico)
-    assert "esta_no_horario_de_pregao" in fonte_loop, "o loop nao esta checando a janela"
+    fonte_ciclo = inspect.getsource(main.ciclo_de_coleta)
+    assert "esta_no_horario_de_pregao" in fonte_ciclo, "o ciclo nao esta checando a janela"
+    assert "rodar_ciclo_protegido" in fonte_loop, (
+        "o loop deixou de passar pela guarda do P2-1 -- uma excecao volta a "
+        "matar a thread de coleta"
+    )
     assert "esta_no_horario_de_pregao" not in inspect.getsource(main.checar_agora), (
         "a coleta em si nao deveria decidir horario"
     )

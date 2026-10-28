@@ -156,6 +156,17 @@ valuation. Também serve de referência de como o cálculo deveria se comportar.
 **Comportamento esperado:** lista de `ok    teste_...` terminando em
 `10/10 testes passaram`, mais uma tabela de conferência manual.
 
+### `python test_coletor.py`
+**O que faz:** cobre o P2-1 — timeout em toda chamada, retry com backoff,
+quais status repetem e quais não, o 429 esperando o minuto da brapi, e a
+guarda que impede uma exceção de matar a thread de coleta. Também confere que
+o token não aparece em log nem em traceback.
+**Quando rodar:** depois de mexer em `coletor.py` ou no loop do `main.py`.
+**Comportamento esperado:** `21/21 testes passaram`, mais uma tabela que mostra
+quantas tentativas e quantos segundos de espera cada tipo de resposta provoca.
+Não toca a rede: `requests.get` é substituído por uma fila de respostas e
+`time.sleep` por um registrador — senão o teste do 429 levaria dois minutos.
+
 ### `python test_pregao.py`
 **O que faz:** confirma que a janela de horário de pregão (P0-5) está
 calculando os dias e horas certos, e que o loop de coleta respeita isso de

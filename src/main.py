@@ -1,9 +1,10 @@
 import threading
 import time
+import traceback
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from coletor import coletar_whitelist, buscar_fundamentos
+from coletor import coletar_whitelist, buscar_fundamentos, esconder_tokens
 from banco import criar_tabelas, salvar_cotacoes, ja_tem_fundamento_hoje, salvar_fundamento
 from whitelist import get_whitelist
 
@@ -67,18 +68,77 @@ def checar_agora():
             salvar_fundamento(ticker, dados)
 
 
+def ciclo_de_coleta():
+    """Um ciclo: coleta se estiver na janela de pregao, senao avisa e passa.
+
+    Extraido do loop_automatico() no P2-1 para poder ser testado sem thread e
+    sem relogio -- e para a guarda ficar num lugar so, em volta dele.
+    """
+    if esta_no_horario_de_pregao():
+        checar_agora()
+        return
+
+    momento = agora_em_brasilia()
+    print(
+        f"\n[{momento.strftime('%d/%m %H:%M')} Brasilia] Fora do horario de "
+        f"pregao (dias uteis, {HORA_ABERTURA}h-{HORA_FECHAMENTO}h). "
+        "Coleta automatica pulada."
+    )
+
+
+# Depois de quantos ciclos falhados seguidos o aviso muda de tom. Dois ja
+# significa que nao foi azar: ou a rede caiu de vez, ou o token morreu, ou tem
+# bug. O numero e baixo de proposito -- o ciclo roda de hora em hora, entao
+# dois sao duas horas de silencio.
+FALHAS_PARA_ALERTAR = 2
+
+
+def rodar_ciclo_protegido():
+    """Roda um ciclo sem deixar excecao nenhuma escapar. Devolve se deu certo.
+
+    ESTA FUNCAO E O P2-1 DO LADO DO main.py. O coletor.py agora trata erro de
+    rede, mas tratar rede nao cobre o resto: um bug no banco, um ticker novo
+    que quebra uma conversao, um disco cheio. Qualquer um deles subindo pela
+    thread a mata, e a thread e `daemon=True` -- ninguem reinicia e ninguem
+    percebe, porque o prompt `>>` continua respondendo normalmente. Foi esse o
+    modo de falha de 28/10/2026: sete semanas de programa vivo sem coletar.
+
+    Engolir excecao e quase sempre errado, e aqui e a escolha certa pelo mesmo
+    motivo que a torna perigosa: o ciclo e repetido. Perder um ciclo custa uma
+    hora de serie; perder a thread custou sete semanas. O traceback inteiro vai
+    para a tela -- engolido e invisivel nao sao a mesma coisa.
+
+    `except Exception` nao pega KeyboardInterrupt nem SystemExit, que herdam de
+    BaseException. Ctrl-C continua encerrando.
+    """
+    try:
+        ciclo_de_coleta()
+        return True
+    except Exception as erro:
+        momento = agora_em_brasilia()
+        print(f"\n[{momento.strftime('%d/%m %H:%M:%S')} Brasilia] ERRO no ciclo de "
+              f"coleta: {erro.__class__.__name__}: {esconder_tokens(erro)}")
+        # o traceback passa pelo filtro de token: foi um traceback que vazou o
+        # BRAPI_TOKEN em 28/10, porque a brapi o recebe na query string
+        print(esconder_tokens(traceback.format_exc()))
+        print("A thread de coleta CONTINUA viva. O proximo ciclo tenta de novo.")
+        return False
+
+
 def loop_automatico():
+    falhas_seguidas = 0
+
     while not encerrar:
         if not pausado:
-            if esta_no_horario_de_pregao():
-                checar_agora()
+            if rodar_ciclo_protegido():
+                falhas_seguidas = 0
             else:
-                momento = agora_em_brasilia()
-                print(
-                    f"\n[{momento.strftime('%d/%m %H:%M')} Brasilia] Fora do horario de "
-                    f"pregao (dias uteis, {HORA_ABERTURA}h-{HORA_FECHAMENTO}h). "
-                    "Coleta automatica pulada."
-                )
+                falhas_seguidas += 1
+                if falhas_seguidas >= FALHAS_PARA_ALERTAR:
+                    print(f"ATENCAO: {falhas_seguidas} ciclos seguidos falharam. "
+                          f"Isso nao e mais azar de rede -- confira token, banco "
+                          f"e o traceback acima antes de confiar na serie.")
+
         for _ in range(INTERVALO_MINUTOS * 60):
             if encerrar:
                 break

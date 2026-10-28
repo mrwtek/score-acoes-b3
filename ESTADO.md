@@ -250,6 +250,40 @@ orienta quando você voltar ao projeto depois de um tempo parado.
       que coluna nova pede conferência de tipo na consulta antes de virar
       medida.
 
+- [x] **P2-1** robustez das chamadas às APIs — `coletor.py` ganhou `_buscar()`
+      com **timeout de 30s, 3 tentativas, backoff 2s→4s e checagem de status**,
+      e as três funções de coleta viraram casca em volta dele. `main.py` ganhou
+      `ciclo_de_coleta()` extraído e `rodar_ciclo_protegido()`, que engole
+      exceção inesperada **imprimindo o traceback** em vez de matar a thread.
+
+      **O retry distingue o que adianta repetir.** Erro de rede e 5xx repetem;
+      **400, 401, 403 e 404 não repetem**, porque a resposta é a mesma na
+      segunda vez e insistir esconde o diagnóstico — "token não fornecido" num
+      ticker enquanto outros passam é limite de plano, não falha de rede. O
+      **429 espera 60s**, porque a janela da brapi é por minuto e tentar em 2s
+      só queima tentativa.
+
+      **O vazamento de token foi fechado na origem.** `esconder_tokens()` troca
+      qualquer token por `<TOKEN>`, e nada sai do coletor nem da guarda da
+      thread sem passar por ele — nem a mensagem do `requests` (que traz a URL
+      inteira), nem o traceback. A URL nunca entra no log: a chamada é
+      identificada por descrição ("cotação de PETR4"). Isso **não** desfaz o
+      vazamento de 28/10 — o token antigo continua tendo que ser trocado.
+
+      **Testado contra as APIs reais depois do conserto:** 13 de 13 cotações na
+      brapi, BolsAI respondendo. `test_coletor.py`, 21 testes, nenhum toca a
+      rede.
+
+      **Efeito colateral medido:** `test_pregao.py` quebrou numa asserção que
+      lia o código-fonte de `loop_automatico()` procurando a checagem de
+      janela, que desceu para `ciclo_de_coleta()`. Comportamento intacto — os
+      dois testes que de fato rodam o loop continuaram passando. A asserção foi
+      atualizada e ganhou uma segunda, que exige o loop passar pela guarda.
+
+      **Custo aceito:** com rede ruim, o pior caso de um ciclo é ~2,5 min (13
+      tickers × 2 APIs × 3 tentativas). O ciclo roda de hora em hora, então
+      cabe.
+
 ### Limpeza de 26/10/2026 (ao retomar o projeto)
 Três coisas estavam fora do lugar depois de ~7 semanas parado:
 - `ESTADO.md` no disco tinha regredido para a versão de 02/09; restaurado da
@@ -269,10 +303,23 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ---
 
-## PARADO: a coleta morre com qualquer falha de rede (diagnosticado 28/10/2026)
+## RESOLVIDO em 28/10/2026 — a coleta morria com qualquer falha de rede
 
-**Estado:** `python main.py` sobe, imprime o menu, e a thread de coleta morre
-no primeiro ticker se a rede piscar. Diagnosticado, **não consertado**.
+> **Consertado pelo P2-1**, no mesmo dia do diagnóstico. O diagnóstico abaixo
+> fica no arquivo porque descreve um modo de falha que vale conhecer: o
+> programa *parecia* vivo. Testado contra as APIs reais depois do conserto —
+> 13 de 13 cotações na brapi e a BolsAI respondendo.
+>
+> **Continua sendo sua:** gerar token novo da brapi e trocar no `.env`. O
+> token antigo já vazou e nenhum código desfaz isso. O que o P2-1 garante é
+> que não vaza de novo — `esconder_tokens()` filtra toda mensagem e todo
+> traceback, com dois testes travando isso.
+>
+> **Ainda não rodado:** `backfill_historico.py` e `backfill_indices.py`, que
+> estendem a série e não dependem dessa thread.
+
+**Estado em 28/10, 13:46 (histórico):** `python main.py` subia, imprimia o
+menu, e a thread de coleta morria no primeiro ticker se a rede piscasse.
 
 **O que aconteceu em 28/10, 13:46.** Um `SSLEOFError` na chamada da brapi
 (handshake TLS interrompido) derrubou a thread inteira. Testado depois: a
@@ -308,8 +355,8 @@ coleta registrada é de **14/09/2026** — sete semanas sem série nova.
 `faixas.py`, `scoring.py`, testes e docs. Nenhum toca `coletor.py` ou
 `main.py`.
 
-**O conserto é o P2-1**, que já estava nas armadilhas do CLAUDE.md e deixou
-de ser teórico. Plano levantado:
+**O conserto foi o P2-1**, que já estava nas armadilhas do CLAUDE.md e deixou
+de ser teórico. O plano levantado, executado como escrito:
 
 - `coletor.py`: um helper `_buscar()` com timeout, retry com backoff e
   checagem de status; as três funções passam a usar ele. `buscar_historico()`
@@ -327,9 +374,11 @@ para sempre, sem erro nenhum.
 **Pendência de segurança:** o traceback de 28/10 expôs o `BRAPI_TOKEN` — a
 brapi põe o token na query string, então ele aparece inteiro em qualquer log
 de erro. Gerar token novo no painel da brapi e trocar no `.env`.
+*Ainda aberta — é ação sua, no painel da brapi.*
 
 **Quando a coleta voltar:** rodar `backfill_historico.py` e
 `backfill_indices.py`, que estendem a série e não dependem dessa thread.
+*Ainda não rodados.*
 
 ---
 
