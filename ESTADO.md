@@ -315,8 +315,12 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 > que não vaza de novo — `esconder_tokens()` filtra toda mensagem e todo
 > traceback, com dois testes travando isso.
 >
-> **Ainda não rodado:** `backfill_historico.py` e `backfill_indices.py`, que
-> estendem a série e não dependem dessa thread.
+> **Rodados em 28/10/2026, depois do conserto:** `backfill_historico.py`
+> (13 linhas novas, o pregão de 27/10) e `backfill_indices.py` (IBOV +1,
+> SELIC +1, CDI +2). As três séries passaram a terminar junto, em **27/10**,
+> e a janela comparável deixou de ser cortada pelo atraso do CDI. Nada se
+> perdeu: a janela da brapi ainda começa em 28/07. Reexportado o BI em
+> seguida.
 
 **Estado em 28/10, 13:46 (histórico):** `python main.py` subia, imprimia o
 menu, e a thread de coleta morria no primeiro ticker se a rede piscasse.
@@ -378,7 +382,7 @@ de erro. Gerar token novo no painel da brapi e trocar no `.env`.
 
 **Quando a coleta voltar:** rodar `backfill_historico.py` e
 `backfill_indices.py`, que estendem a série e não dependem dessa thread.
-*Ainda não rodados.*
+*Feito em 28/10/2026 — ver o quadro no topo desta seção.*
 
 ---
 

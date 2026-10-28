@@ -287,10 +287,14 @@ atrapalharem a tarefa atual, mas não conserte fora de hora.
   protege o valuation de outlier é `LIMITE_YIELD` / `LIMITE_BOOK_TO_MARKET`,
   que cortam antes. A winsorização é a segunda linha e só passa a valer de
   verdade com a whitelist maior (P1-8). Coberto pelo `teste_35`.
-- `score_reversao` com janela parcial ainda é frágil: hoje são 63 de 252
+- `score_reversao` com janela parcial ainda é frágil: hoje são 64 de 252
   pregões, e quem está na mínima tira exatamente 100. A janela e o mínimo já
-  são explícitos (P1-3 feito) e o ranking mostra `63/252`, mas só o tempo
+  são explícitos (P1-3 feito) e o ranking mostra `64/252`, mas só o tempo
   enche a janela.
+  **Medido em 28/10/2026:** acrescentar **um único pregão** (o de 27/10) moveu
+  a WEGE3 de 81,7 para 65,1 — 16,6 pontos num dia em que a ação subiu 3,7%.
+  Com a janela curta, o denominador (máxima − mínima) é estreito, então cada
+  dia novo pesa muito. Não é bug; é o que "64 de 252" quer dizer.
 - Whitelist pequena para normalização relativa e PCA terem significado
   estatístico (P1-8).
 - `pausado` e `encerrar` são globais compartilhadas entre threads sem
