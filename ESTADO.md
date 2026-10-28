@@ -1,6 +1,6 @@
 # Estado do projeto
 
-Atualizado em: 26/10/2026
+Atualizado em: 28/10/2026
 Referência de prioridade: seção 10 do PRD v1.2
 
 Atualize este arquivo ao fim de cada tarefa e commite junto. Ele é o que te
@@ -218,7 +218,61 @@ Três coisas estavam fora do lugar depois de ~7 semanas parado:
 
 ## Em andamento
 
-- [ ] nada — próxima é **P1-14**
+- [ ] nada começado. **Mas leia o bloco abaixo antes de escolher a próxima
+      tarefa** — a coleta está parada e isso vale mais que o backlog.
+
+---
+
+## PARADO: a coleta morre com qualquer falha de rede (diagnosticado 28/10/2026)
+
+**Estado:** `python main.py` sobe, imprime o menu, e a thread de coleta morre
+no primeiro ticker se a rede piscar. Diagnosticado, **não consertado**.
+
+**O que aconteceu em 28/10, 13:46.** Um `SSLEOFError` na chamada da brapi
+(handshake TLS interrompido) derrubou a thread inteira. Testado depois: a
+brapi responde normal, 6 de 6 em ~0,9s — a falha foi passageira.
+
+**Por que uma falha passageira para tudo:**
+
+    coletor.py   buscar_dados_acao()   requests.get() sem timeout,
+                                       sem retry, sem checar status
+                    ↓ exceção sobe sem ninguém capturar
+    main.py      coletar_whitelist() → checar_agora() → loop_automatico()
+                    ↓
+                 Thread-1 morre e ninguém reinicia
+
+A thread é `daemon=True`. O prompt `>>` continua respondendo e os comandos
+funcionam, então **o programa parece vivo sem estar coletando nada**.
+
+**Dano conferido no banco:** 0 cotações e 0 fundamentos em 28/10. A última
+coleta registrada é de **14/09/2026** — sete semanas sem série nova.
+
+**Não veio das mudanças de score.** Os commits e95715a e 7f1c735 tocaram
+`faixas.py`, `scoring.py`, testes e docs. Nenhum toca `coletor.py` ou
+`main.py`.
+
+**O conserto é o P2-1**, que já estava nas armadilhas do CLAUDE.md e deixou
+de ser teórico. Plano levantado:
+
+- `coletor.py`: um helper `_buscar()` com timeout, retry com backoff e
+  checagem de status; as três funções passam a usar ele. `buscar_historico()`
+  **já tem esse padrão** — serve de modelo, é só generalizar. O backoff tem
+  que respeitar o limite da brapi (20 req/min) e tratar 429 à parte.
+- `main.py`: guarda no corpo de `loop_automatico()`, para erro inesperado ser
+  registrado sem matar a thread. Fica fora do arquivo do P2-1 de propósito;
+  pode virar commit separado.
+- `test_coletor.py` novo: o retry acontece, desiste depois de N, status != 200
+  vira None, e o loop sobrevive a uma exceção.
+
+Sem timeout há um risco pior que o crash: conexão pendurada trava a thread
+para sempre, sem erro nenhum.
+
+**Pendência de segurança:** o traceback de 28/10 expôs o `BRAPI_TOKEN` — a
+brapi põe o token na query string, então ele aparece inteiro em qualquer log
+de erro. Gerar token novo no painel da brapi e trocar no `.env`.
+
+**Quando a coleta voltar:** rodar `backfill_historico.py` e
+`backfill_indices.py`, que estendem a série e não dependem dessa thread.
 
 ---
 
