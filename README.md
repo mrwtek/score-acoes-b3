@@ -113,14 +113,31 @@ A flag é deliberadamente flag, e não nota: não entra em peso, categoria, orde
 
 ## Testes
 
-Os testes rodam de dois jeitos — como suíte, ou um arquivo por vez:
+**227 testes em 13 scripts**, cobrindo fórmulas, carregadores, coleta, exportação e validação. Nenhum deles toca a rede, e nenhum depende de pytest ou de qualquer dependência além das do `requirements.txt`.
+
+Cada script roda sozinho e imprime o próprio resumo:
 
 ```bash
-pytest                              # requer pytest instalado (não está no requirements.txt)
-cd src && python test_scoring.py    # roda sozinho e imprime a tabela de conferência
+cd src
+python test_scoring.py      # 39/39 testes passaram
+python test_faixas.py       # 23/23
+python test_exportar_bi.py  # 22/22
 ```
 
-**227 testes em 14 arquivos**, cobrindo fórmulas, carregadores, coleta, exportação e validação. Nenhum teste de coleta toca a rede.
+| Script | Testes |
+|---|---|
+| `test_scoring.py` | 39 |
+| `test_faixas.py` | 23 |
+| `test_exportar_bi.py` | 22 |
+| `test_coletor.py` · `test_historico.py` | 21 cada |
+| `test_indices.py` | 19 |
+| `test_premio.py` · `test_validacao.py` | 15 cada |
+| `test_teses.py` | 13 |
+| `test_setores.py` | 12 |
+| `test_pregao.py` · `test_valuation.py` | 10 cada |
+| `test_analise.py` | 7 |
+
+> `test_bolsai.py` não entra nessa conta: são nove linhas que chamam a API de fundamentos e imprimem a resposta, para conferir formato à mão. Toca a rede e gasta cota — rode só quando quiser inspecionar o retorno cru.
 
 Padrão em toda mudança de lógica de cálculo: dados sintéticos, casos de borda explícitos e uma tabela de conferência impressa no final — para o resultado poder ser lido por um humano, não só aprovado por um `assert`.
 
@@ -179,7 +196,7 @@ Variáveis em `.env`:
 | Variável | Onde obter |
 |---|---|
 | `BRAPI_TOKEN` | brapi.dev — plano gratuito |
-| `BOLSAI_TOKEN` | BolsAI — plano gratuito (cota diária) |
+| `BOLSAI_TOKEN` | usebolsai.com — plano gratuito (cota diária) |
 
 A API do Banco Central (SGS) é aberta e não exige token.
 
@@ -242,4 +259,4 @@ Isso foi testado na prática: o projeto ficou 7 semanas parado e, na retomada, t
 
 ## Stack
 
-Python · pandas · NumPy · scikit-learn · statsmodels · matplotlib · seaborn · requests · python-dotenv · pytest · SQLite · Jupyter · Git · Power BI · DAX · Power Query (M)
+Python · pandas · NumPy · scikit-learn · statsmodels · matplotlib · seaborn · requests · python-dotenv · SQLite · Jupyter · Git · Power BI · DAX · Power Query (M)
