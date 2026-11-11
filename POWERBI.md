@@ -231,7 +231,7 @@ Página Inicial → Transformar dados → Gerenciar Parâmetros → Novo:
 |---|---|
 | Nome | `PastaBI` |
 | Tipo | Texto |
-| Valor atual | `C:\Users\Dimlu\app-b3\exports\bi` |
+| Valor atual | `C:\caminho\para\app-b3\exports\bi` |
 
 Serve para que mudar a pasta de lugar seja um campo, e não nove consultas.
 

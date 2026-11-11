@@ -1,4 +1,4 @@
-expression PastaBI = "C:\Users\Dimlu\app-b3\exports\bi" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+expression PastaBI = "C:\caminho\para\app-b3\exports\bi" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
 	lineageTag: 530c1d5b-acc0-4b19-8dcc-bfda5590f951
 
 	annotation PBI_NavigationStepName = Navegação
