@@ -18,6 +18,8 @@ Decidir compra e venda exigia abrir três ou quatro fontes separadas e comparar 
 
 Esse requisito — comparar a mesma nota em datas diferentes — é o que determina quase toda decisão de desenho abaixo.
 
+> Para o bastidor — a linha do tempo e os seis erros que moldaram o código, incluindo um que devolvia dez linhas plausíveis e todas erradas — veja [`docs/ENGENHARIA.md`](docs/ENGENHARIA.md).
+
 ## Como funciona
 
 ```
@@ -238,6 +240,7 @@ analise.ipynb     bancada de pesquisa (PCA, ADF, ACF/PACF, ARIMA — só lê)
 
 | Arquivo | Papel |
 |---|---|
+| [`docs/ENGENHARIA.md`](docs/ENGENHARIA.md) | **Comece por aqui se quiser o bastidor:** a linha do tempo e os seis incidentes que moldaram o código |
 | `PRD` | Contexto, requisitos, modelo de dados alvo, roadmap, dívidas técnicas |
 | `ESTADO.md` | Onde o trabalho parou e qual é a próxima tarefa |
 | `DECISOES.md` | Append-only: por que cada escolha foi feita, com o número medido e a alternativa descartada |

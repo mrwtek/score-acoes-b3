@@ -16,3 +16,6 @@ Power BI/.PBIP/**/.pbi/cache.abf
 
 # assinatura criptografada presa a esta maquina e a este usuario
 Power BI/.PBIP/**/.pbi/localSettings.json
+
+# documento interno: material de carreira, nao vai para o repositorio
+docs/RESUMO_PROJETO.md
