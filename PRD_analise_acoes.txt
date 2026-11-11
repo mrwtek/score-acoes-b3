@@ -645,7 +645,7 @@ G = grande (mais de um dia de trabalho intercalado).
  P2-7  Formulario de compra/venda no dashboard.         P      RF-11
  P2-8  Agendamento pelo SO (Task Scheduler / cron) no   P      Fase 5
        lugar do loop em thread.
- P2-9  Converter test_bolsai.py em teste de             P      DT-12
+ P2-9  Converter sonda_bolsai.py em teste de             P      DT-12
        integracao de verdade.
 
 --- P3 - EXTENSOES ---------------------------------------------------------
@@ -706,7 +706,7 @@ DT-10 Uma requisicao por ticker na brapi; o endpoint em lote reduz consumo de
       cota.
 DT-11 Universo pequeno (5 tickers base): PCA e normalizacao relativa perdem
       significado estatistico. Ampliar a whitelist antes de confiar nos scores.
-DT-12 test_bolsai.py e script solto; converter em teste de integracao real.
+DT-12 sonda_bolsai.py e script solto; converter em teste de integracao real.
 
 RISCOS
   R1. Mudanca de contrato ou de plano das APIs (brapi/BolsAI) quebra a coleta.

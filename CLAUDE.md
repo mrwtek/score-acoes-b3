@@ -63,7 +63,9 @@ trade-off antes de decidir por mim.
       backfill_indices.py     idem, para IBOV, Selic e CDI
       backfill_transacoes.py  script de uso único, já executado
       migrar_datas_iso.py     script de uso único, já executado
-      test_bolsai.py          script solto de teste manual da API BolsAI
+      sonda_bolsai.py         sonda manual da API BolsAI; toca a rede e gasta
+                              cota. Nao e teste
+      sonda_brapi.py          idem, para a brapi
     data/
       acoes.db                banco SQLite
       backups/                cópias automáticas com timestamp

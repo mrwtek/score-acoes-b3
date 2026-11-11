@@ -137,7 +137,7 @@ python test_exportar_bi.py  # 22/22
 | `test_pregao.py` · `test_valuation.py` | 10 cada |
 | `test_analise.py` | 7 |
 
-> `test_bolsai.py` não entra nessa conta: são nove linhas que chamam a API de fundamentos e imprimem a resposta, para conferir formato à mão. Toca a rede e gasta cota — rode só quando quiser inspecionar o retorno cru.
+> `sonda_bolsai.py` e `sonda_brapi.py` não entram nessa conta e **não são testes**: cada uma tem dez linhas que chamam a API, imprimem a resposta crua e servem para conferir formato à mão quando se suspeita da fonte, e não do código. Tocam a rede e gastam cota.
 
 Padrão em toda mudança de lógica de cálculo: dados sintéticos, casos de borda explícitos e uma tabela de conferência impressa no final — para o resultado poder ser lido por um humano, não só aprovado por um `assert`.
 

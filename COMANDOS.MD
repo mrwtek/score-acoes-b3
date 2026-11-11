@@ -245,9 +245,10 @@ mostrando que a ordem alfabética das datas em formato brasileiro não é
 cronológica, outra com o erro de somar o CDI em vez de compor. Usa banco em
 memória — não toca no `data/acoes.db` nem em `exports/bi/`.
 
-### `python test_bolsai.py`
-**O que faz:** faz uma chamada direta e crua à API BolsAI para um ticker, sem
-passar pelo resto do sistema. Só imprime a resposta.
+### `python sonda_bolsai.py` e `python sonda_brapi.py`
+**O que faz:** cada uma faz uma chamada direta e crua à API correspondente
+(BolsAI e brapi) para um ticker, sem passar pelo resto do sistema. Só imprime a
+resposta. **Não são testes** — tocam a rede e gastam cota.
 **Quando rodar:** se suspeitar que o problema é a API em si (token, cota,
 formato de resposta), não o seu código.
 
